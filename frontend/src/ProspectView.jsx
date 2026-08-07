@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Filter, DollarSign, Zap, Download, ArrowUpDown, Target, Play, Square, CheckCircle2 } from 'lucide-react';
+import { Filter, DollarSign, Zap, Download, ArrowUpDown, Target, Play, Square, CheckCircle2, HelpCircle } from 'lucide-react';
 import { API_BASE } from './apiConfig';
 import DistrictDrawer from './DistrictDrawer';
+import MethodologyModal from './MethodologyModal';
 
 // FundFinder prospecting view, merged in from the Streamlit app, with the
 // Target Profile scoring engine and batch research ported from an earlier client engagement.
@@ -12,6 +13,7 @@ function ProspectView({ onResearch, productType, onOpenDossier }) {
   const [loading, setLoading] = useState(true);
   const [researched, setResearched] = useState(new Map());
   const [drawerDistrict, setDrawerDistrict] = useState(null);
+  const [showMethod, setShowMethod] = useState(false);
   const [batchLimit, setBatchLimit] = useState(10);
   const [batch, setBatch] = useState(null);
   const pollRef = useRef(null);
@@ -154,7 +156,16 @@ function ProspectView({ onResearch, productType, onOpenDossier }) {
             <h3 style={{ margin: 0 }}>Target Filters</h3>
           </div>
           <div className="filter-field">
-            <label>Target Profiles <span className="filter-value">{activeProfiles.length ? `${activeProfiles.length} active` : 'All'}</span></label>
+            <label>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                Target Profiles
+                <button className="btn-icon info-btn" onClick={() => setShowMethod(true)}
+                  title="How scoring works" aria-label="How scoring works">
+                  <HelpCircle size={13} />
+                </button>
+              </span>
+              <span className="filter-value">{activeProfiles.length ? `${activeProfiles.length} active` : 'All'}</span>
+            </label>
             <div className="profile-chips">
               {profiles.map(p => (
                 <button
@@ -310,6 +321,10 @@ function ProspectView({ onResearch, productType, onOpenDossier }) {
           </div>
         </div>
       </div>
+
+      {showMethod && (
+        <MethodologyModal profiles={profiles} counts={null} onClose={() => setShowMethod(false)} />
+      )}
 
       <DistrictDrawer
         district={drawerDistrict}

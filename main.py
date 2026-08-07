@@ -358,6 +358,7 @@ def dashboard(db: Session = Depends(get_db)):
 
     from batch_runner import runner
     return {
+        "profiles": PROFILE_DEFINITIONS,
         "universe": len(rows),
         "targeted": len(targeted),
         "researched": len(researched_names),

@@ -38,12 +38,36 @@ FUNDING_METADATA_COLS = [
 # pitch and funding angle; districts matching multiple profiles are hot accounts.
 
 PROFILE_DEFINITIONS = [
-    {"name": "State Money + Literacy Gap", "label": "LCFF+ELA", "key": "profile_lcff_ela"},
-    {"name": "EL Pipeline Problem", "label": "EL Pipeline", "key": "profile_el_pipeline"},
-    {"name": "Mandated to Improve", "label": "Improv.", "key": "profile_improvement"},
-    {"name": "Title I Heavyweight", "label": "Title I", "key": "profile_title_i"},
-    {"name": "Disengagement Crisis", "label": "Absence", "key": "profile_absence"},
-    {"name": "SPED/Dyslexia Gap", "label": "SPED", "key": "profile_sped"},
+    {
+        "name": "State Money + Literacy Gap", "label": "LCFF+ELA", "key": "profile_lcff_ela",
+        "rule": "Receives over $1M in LCFF supplemental/concentration funding AND fewer than half of students read at grade level.",
+        "angle": "They have extra state money earmarked for high-need students, and the need is visible in their reading scores. The funding source and the problem line up.",
+    },
+    {
+        "name": "EL Pipeline Problem", "label": "EL Pipeline", "key": "profile_el_pipeline",
+        "rule": "500+ English learners (15%+ of enrollment), with 20%+ stuck at beginning ELPAC proficiency and under 25% reaching well-developed.",
+        "angle": "A large EL population that isn't progressing. Title III and LCFF dollars specifically fund tools that help these students.",
+    },
+    {
+        "name": "Mandated to Improve", "label": "Improv.", "key": "profile_improvement",
+        "rule": "Has schools in state/federal improvement status (CSI, ATSI, or TSI).",
+        "angle": "These districts are required to show improvement and must publish plans for how. Urgency is built in.",
+    },
+    {
+        "name": "Title I Heavyweight", "label": "Title I", "key": "profile_title_i",
+        "rule": "Title I funding is at least 3% of total revenue AND fewer than half of students read at grade level.",
+        "angle": "Title I is a meaningful slice of their budget, not a rounding error — and supplemental instruction is exactly what Title I pays for.",
+    },
+    {
+        "name": "Disengagement Crisis", "label": "Absence", "key": "profile_absence",
+        "rule": "Chronic absenteeism above 25% AND fewer than half of students read at grade level.",
+        "angle": "A quarter of students regularly missing school compounds the achievement gap. Engagement-focused tools speak directly to this.",
+    },
+    {
+        "name": "SPED/Dyslexia Gap", "label": "SPED", "key": "profile_sped",
+        "rule": "1,000+ special education students (12%+ of enrollment) AND fewer than 45% of students read at grade level.",
+        "angle": "A large SPED population with IEP goals to document. IDEA Part B funds progress-monitoring and intervention tools.",
+    },
 ]
 
 

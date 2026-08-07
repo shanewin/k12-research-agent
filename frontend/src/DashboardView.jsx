@@ -1,10 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { Layers, Target, Brain, Users, Building2, Zap, ArrowRight, Activity, FileText } from 'lucide-react';
+import { Layers, Target, Brain, Users, Building2, Zap, ArrowRight, Activity, FileText, HelpCircle } from 'lucide-react';
 import { API_BASE } from './apiConfig';
+import MethodologyModal from './MethodologyModal';
 
 // CRM-style landing dashboard: pipeline funnel, hot targets, recent dossiers.
 function DashboardView({ onGoProspect, onResearchDistrict, onOpenDossier }) {
   const [data, setData] = useState(null);
+  const [showMethod, setShowMethod] = useState(false);
+  const [profileDefs, setProfileDefs] = useState(null);
+
+  const openMethodology = () => {
+    setShowMethod(true);
+    if (!profileDefs && !(data && data.profiles)) {
+      // Fallback source for the definitions if the dashboard payload lacks them
+      fetch(`${API_BASE}/api/funding/CA`)
+        .then(res => res.json())
+        .then(d => setProfileDefs(d.profiles || []))
+        .catch(() => {});
+    }
+  };
 
   useEffect(() => {
     const load = () => fetch(`${API_BASE}/api/dashboard`)
@@ -18,7 +32,7 @@ function DashboardView({ onGoProspect, onResearchDistrict, onOpenDossier }) {
 
   const stages = [
     { label: 'Universe', value: data.universe, icon: Layers, hint: 'CA districts in dataset' },
-    { label: 'ICP Targets', value: data.targeted, icon: Target, hint: 'Match ≥1 target profile' },
+    { label: 'ICP Targets', value: data.targeted, icon: Target, hint: 'Match ≥1 target profile', info: true },
     { label: 'Researched', value: data.researched, icon: Brain, hint: 'AI dossiers completed' },
     { label: 'Contacts', value: data.contacts_found, icon: Users, hint: 'Decision-makers found' },
     { label: 'In HubSpot', value: data.synced, icon: Building2, hint: 'Synced to CRM' },
@@ -42,7 +56,15 @@ function DashboardView({ onGoProspect, onResearchDistrict, onOpenDossier }) {
         {stages.map((s, i) => (
           <React.Fragment key={s.label}>
             <div className="pipeline-stage card">
-              <s.icon size={18} className="accent" />
+              <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                <s.icon size={18} className="accent" />
+                {s.info && (
+                  <button className="btn-icon info-btn" onClick={openMethodology}
+                    title="How is this calculated?" aria-label="How is this calculated?">
+                    <HelpCircle size={15} />
+                  </button>
+                )}
+              </div>
               <div className="pipeline-value">{s.value.toLocaleString()}</div>
               <div className="pipeline-label">{s.label}</div>
               <div className="pipeline-hint">{s.hint}</div>
@@ -107,6 +129,9 @@ function DashboardView({ onGoProspect, onResearchDistrict, onOpenDossier }) {
               <Activity size={17} className="accent" />
               <h3>Target Profile Breakdown</h3>
             </div>
+            <button className="btn-secondary dash-link" onClick={openMethodology}>
+              <HelpCircle size={13} /> How scoring works
+            </button>
           </div>
           <div className="profile-bars">
             {data.profile_breakdown.map(p => (
@@ -121,6 +146,14 @@ function DashboardView({ onGoProspect, onResearchDistrict, onOpenDossier }) {
           </div>
         </div>
       </div>
+
+      {showMethod && (
+        <MethodologyModal
+          profiles={(data && data.profiles) || profileDefs || []}
+          counts={data.profile_breakdown}
+          onClose={() => setShowMethod(false)}
+        />
+      )}
     </div>
   );
 }
