@@ -284,6 +284,15 @@ def list_results(db: Session = Depends(get_db)):
         for r in rows
     ]
 
+@app.post("/api/outreach/{result_id}")
+def draft_outreach(result_id: int):
+    """Generate a profile-based outreach email sequence for a saved dossier."""
+    from analysis.outreach import generate_outreach
+    result = generate_outreach(result_id)
+    if "error" in result:
+        raise HTTPException(status_code=400, detail=result["error"])
+    return result
+
 @app.post("/api/hubspot/sync/{result_id}")
 def hubspot_sync(result_id: int, db: Session = Depends(get_db)):
     """Push one research result to HubSpot (company + contacts)."""

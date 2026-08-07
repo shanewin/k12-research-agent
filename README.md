@@ -59,6 +59,17 @@ When you research a district, an agent pipeline runs eight phases:
 
 Results persist to a local database, appear in the Dossiers library, and are ready to sync to HubSpot. A **batch mode** runs the pipeline over your top N targets unattended (start it from the Prospect view or the CLI) and skips districts you've already researched, so re-running always continues where you left off.
 
+## From research to written outreach
+
+Every dossier has a **Draft Outreach Sequence** button. It generates one email per matched target profile — ordered by funding-angle strength, personalized with evidence from the research (board actions, program adoptions, leadership changes), and governed by the writing rules in [`prompts/core_rules.md`](prompts/core_rules.md). Those rules are the distillation of what actually works in K-12 cold outreach, and they're worth reading even if you never run the code. The four that matter most:
+
+1. **Reference their actions, not their problems** — "I saw your board approved a structured literacy initiative," never "your reading scores are critically low."
+2. **Ask, don't tell** — end with a soft question, not a pitch.
+3. **Funding as context, not pressure** — "districts with similar profiles typically fund this through LCFF," never "you have $19.5M that could pay for this."
+4. **Position as peer, not expert** — you're starting a relationship with someone who knows their district better than you ever will.
+
+Drafts appear on the dossier (copy-to-clipboard per email, with suggested recipients drawn from the contact intelligence) and travel to HubSpot as a note on the district's company record when you sync.
+
 **Cost**: each district costs roughly $0.50–1.25 in Anthropic (Claude Haiku) and Tavily credits and takes 3–7 minutes. The scoring layer is free — you only pay for districts you choose to research.
 
 ## Quickstart
@@ -127,7 +138,7 @@ python hubspot_import.py --funding-csv
 python hubspot_import.py --all-unsynced
 ```
 
-Everything dedupes on the district's federal NCES ID (a unique property), so the bulk import and research syncs merge into a single company record per district, and re-runs update instead of duplicating. You can also sync any single dossier from the district panel in the app. Once imported, build HubSpot lists like *"ICP profiles ≥ 4 and not yet contacted"* — that's your call list.
+Everything dedupes on the district's federal NCES ID (a unique property), so the bulk import and research syncs merge into a single company record per district, and re-runs update instead of duplicating. Drafted outreach sequences attach to the company as notes. You can also sync any single dossier from the district panel in the app. Once imported, build HubSpot lists like *"ICP profiles ≥ 4 and not yet contacted"* — that's your call list.
 
 ## Batch research from the command line
 

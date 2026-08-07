@@ -194,6 +194,18 @@ class HubSpotClient:
         path = f"/crm/v4/objects/contacts/{contact_id}/associations/default/companies/{company_id}"
         self._request("PUT", path)
 
+    def create_company_note(self, company_id: str, body_html: str):
+        """Attach a note to a company (used for drafted outreach sequences)."""
+        if self.dry_run:
+            logger.info(f"  [dry-run] Would attach note ({len(body_html)} chars) to company {company_id}")
+            return
+        from datetime import datetime, timezone
+        note = self._request("POST", "/crm/v3/objects/notes", json={"properties": {
+            "hs_note_body": body_html[:65000],
+            "hs_timestamp": datetime.now(timezone.utc).isoformat(),
+        }})
+        self._request("PUT", f"/crm/v4/objects/notes/{note['id']}/associations/default/companies/{company_id}")
+
 
 # --- Mapping: DistrictProfile dict -> HubSpot records ---
 
@@ -293,8 +305,24 @@ def import_profile(client: HubSpotClient, profile: dict, skip_no_email: bool = F
             client.associate_contact_to_company(contact_id, company_id)
         imported += 1
 
-    logger.info(f"Done: {name} — company synced, {imported} contacts imported, {skipped} skipped")
-    return {"company_id": company_id, "contacts_imported": imported, "contacts_skipped": skipped}
+    # Drafted outreach sequence -> a note on the company record
+    outreach = profile.get("outreach") or {}
+    notes_created = 0
+    if outreach.get("emails") and company_id:
+        lines = [f"<strong>Drafted outreach sequence — {name}</strong> (AI-generated, review before sending)<br><br>"]
+        for e in outreach["emails"]:
+            lines.append(
+                f"<strong>Email {e.get('sequence_number')}: {e.get('subject_line')}</strong><br>"
+                f"<em>Angle: {e.get('profile')} · Funding: {e.get('funding_source')}</em><br>"
+                f"{(e.get('body') or '').replace(chr(10), '<br>')}<br><br>"
+            )
+        client.create_company_note(company_id, "".join(lines))
+        notes_created = 1
+
+    logger.info(f"Done: {name} — company synced, {imported} contacts imported, {skipped} skipped"
+                + (", outreach note attached" if notes_created else ""))
+    return {"company_id": company_id, "contacts_imported": imported,
+            "contacts_skipped": skipped, "outreach_notes": notes_created}
 
 
 def _csv_num(val, pct_scale=False):

@@ -15,6 +15,7 @@ function App() {
   const [state, setState] = useState(STATE);
   const [view, setView] = useState('dashboard'); // 'dashboard' | 'prospect' | 'research' | 'dossiers'
   const [dossierId, setDossierId] = useState(null);
+  const [lastResultId, setLastResultId] = useState(null);
   const [fundingRow, setFundingRow] = useState(null);
   const [districts, setDistricts] = useState([]);
   const [isLoadingDistricts, setIsLoadingDistricts] = useState(false);
@@ -155,6 +156,7 @@ Initiate contact with the Director of Instructional Technology, referencing the 
         setThinkerLogs(prev => [...prev, { id: Date.now(), msg: data.message, timestamp: new Date().toLocaleTimeString() }]);
       } else if (data.type === 'complete') {
         setProfile(data.profile);
+        setLastResultId(data.result_id || null);
         setIsSearching(false);
         socket.close();
       } else if (data.type === 'error') {
@@ -368,7 +370,19 @@ Initiate contact with the Director of Instructional Technology, referencing the 
         </div>
         )}
 
-        {view === 'research' && profile && <DossierPanel profile={profile} />}
+        {view === 'research' && profile && (
+          <DossierPanel
+            profile={profile}
+            resultId={lastResultId}
+            onRefresh={() => {
+              // Pull the enriched dossier (incl. outreach) from the results store
+              fetch(`${API_BASE}/api/results/${lastResultId}`)
+                .then(res => res.json())
+                .then(d => setProfile(d.profile))
+                .catch(() => {});
+            }}
+          />
+        )}
       </main>
 
     </div>

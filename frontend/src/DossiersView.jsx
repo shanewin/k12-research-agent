@@ -16,13 +16,15 @@ function DossiersView({ selectedId, onSelect }) {
       .catch(() => setLoading(false));
   }, []);
 
-  useEffect(() => {
+  const loadDetail = () => {
     if (selectedId == null) { setDetail(null); return; }
     fetch(`${API_BASE}/api/results/${selectedId}`)
       .then(res => res.json())
       .then(setDetail)
       .catch(() => setDetail(null));
-  }, [selectedId]);
+  };
+
+  useEffect(loadDetail, [selectedId]);
 
   if (detail) {
     return (
@@ -30,7 +32,7 @@ function DossiersView({ selectedId, onSelect }) {
         <button className="btn-secondary" style={{ marginBottom: '1rem' }} onClick={() => onSelect(null)}>
           <ArrowLeft size={14} /> All dossiers
         </button>
-        <DossierPanel profile={detail.profile} />
+        <DossierPanel profile={detail.profile} resultId={detail.id} onRefresh={loadDetail} />
       </div>
     );
   }

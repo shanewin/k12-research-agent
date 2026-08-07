@@ -1191,3 +1191,38 @@ input:focus, .custom-select:focus {
 .method-count { font-size: 0.75rem; font-weight: 700; color: var(--accent-color); }
 .method-rule, .method-angle { margin: 0.25rem 0 0; font-size: 0.82rem; line-height: 1.5; color: var(--text-secondary, #8892b0); }
 .method-rule strong, .method-angle strong { color: var(--text-primary, #e6f1ff); }
+
+/* ===== Outreach sequence ===== */
+.outreach-suggestions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+.outreach-suggestion-label { font-size: 0.75rem; color: var(--text-secondary, #8892b0); }
+.outreach-emails { display: flex; flex-direction: column; gap: 0.75rem; }
+.outreach-email {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 10px;
+  padding: 0.9rem 1.1rem;
+}
+.outreach-email-head { display: flex; align-items: center; gap: 0.6rem; }
+.outreach-seq {
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: var(--accent-color);
+  background: rgba(100, 255, 218, 0.1);
+  border-radius: 6px;
+  padding: 0.15rem 0.45rem;
+}
+.outreach-subject { flex: 1; font-weight: 700; font-size: 0.92rem; }
+.outreach-meta { font-size: 0.72rem; color: var(--text-secondary, #8892b0); margin: 0.2rem 0 0.5rem; }
+.outreach-body {
+  margin: 0;
+  font-size: 0.86rem;
+  line-height: 1.6;
+  color: var(--text-secondary, #c3cbe0);
+  white-space: pre-wrap;
+}
