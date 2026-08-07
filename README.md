@@ -1,5 +1,11 @@
 # California K12 Intelligence
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-teal.svg)](LICENSE)
+![Python](https://img.shields.io/badge/Python-3.11%2B-blue)
+![React](https://img.shields.io/badge/React-Vite-61DAFB)
+![FastAPI](https://img.shields.io/badge/FastAPI-backend-009688)
+![Claude](https://img.shields.io/badge/AI-Claude%20Haiku%204.5-d97757)
+
 **An open-source GTM (go-to-market) platform for selling into California school districts.** It scores all 1,860 CA districts against your ideal customer profile, runs an AI research agent on the best targets, finds the decision-makers, and syncs everything into HubSpot.
 
 ## The story behind this project

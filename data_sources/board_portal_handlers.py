@@ -1,7 +1,7 @@
 import logging
 import json
 from abc import ABC, abstractmethod
-from typing import List, Dict, Optional
+from typing import List, Dict
 from anthropic import Anthropic
 from .tavily_client import K12TavilyClient
 
@@ -78,7 +78,7 @@ class CustomHandler(PortalHandler):
             if "```json" in content:
                 content = content.split("```json")[1].split("```")[0].strip()
             return json.loads(content)
-        except:
+        except Exception:
             return []
 
 class PortalRegistry:

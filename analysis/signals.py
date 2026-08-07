@@ -2,7 +2,6 @@ import json
 import logging
 from typing import List, Dict
 from anthropic import Anthropic
-from dataclasses import asdict
 from data_sources.tavily_client import K12TavilyClient
 from models.signal import Signal
 from config.product_context import ProductContext
@@ -56,7 +55,7 @@ Return ONLY valid JSON array of strings: ["query1", "query2", "query3"]"""
         
         try:
             follow_up_queries = json.loads(response.content[0].text)
-        except:
+        except Exception:
             follow_up_queries = [f'"{district_name}" {context.product_category} RFP']
 
         # Step 2: Run follow-ups

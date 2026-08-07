@@ -1,9 +1,9 @@
 import json
 import logging
-from typing import List, Optional, Dict
+from typing import List, Dict
 from anthropic import Anthropic
 from .tavily_client import K12TavilyClient
-from models.news import NewsReport, NewsProblem, LeadershipEvent, CompetitorMention, BudgetIndicator, CommunitySentiment
+from models.news import NewsReport, CommunitySentiment
 from config.product_context import ProductContext
 
 logger = logging.getLogger(__name__)

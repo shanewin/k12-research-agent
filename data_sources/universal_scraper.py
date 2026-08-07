@@ -1,12 +1,10 @@
-import os
 import requests
 import re
 import io
 import time
 import sqlite3
-import json
 from typing import Optional, Callable, List
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urlparse
 from bs4 import BeautifulSoup
 import PyPDF2
 import logging

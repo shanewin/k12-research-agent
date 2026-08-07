@@ -1,5 +1,4 @@
 import json
-from typing import Optional
 from anthropic import Anthropic
 from models.district import DistrictProfile
 from models.buying_profile import BuyingProfile

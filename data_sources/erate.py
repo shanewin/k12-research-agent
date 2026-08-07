@@ -1,8 +1,7 @@
 import os
 import requests
-from typing import List, Optional
+from typing import List
 from models.erate import ErateReport, ErateFundingRequest
-from config.product_context import ProductContext
 
 class ErateIntelligence:
     """

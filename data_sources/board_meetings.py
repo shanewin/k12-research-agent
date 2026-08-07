@@ -194,7 +194,7 @@ class BoardMeetingIntelligence:
             elif "```" in content:
                 content = content.split("```")[1].split("```")[0].strip()
             return json.loads(content)
-        except:
+        except Exception:
             return []
 
     def _handle_boarddocs(self, url: str, district_name: str) -> List[Dict]:

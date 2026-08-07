@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, List, Optional
+from typing import Optional
 import json
 from .tavily_client import K12TavilyClient
 from anthropic import Anthropic

@@ -1,13 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Brain, FileText, Activity, ShieldCheck, MapPin, Users, Zap, ExternalLink, ChevronDown, DollarSign } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
+import { Search, Brain, FileText, Activity, MapPin, Zap, DollarSign, LayoutDashboard } from 'lucide-react';
 import './App.css';
 import { API_BASE, WS_BASE } from './apiConfig';
 import ProspectView from './ProspectView';
 import DashboardView from './DashboardView';
 import DossiersView from './DossiersView';
 import DossierPanel from './DossierPanel';
-import { LayoutDashboard } from 'lucide-react';
 
 // California-specific build: the platform targets CA districts only.
 const STATE = 'CA';
@@ -26,7 +24,6 @@ function App() {
   const [profile, setProfile] = useState(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [filteredDistricts, setFilteredDistricts] = useState([]);
-  const [ws, setWs] = useState(null);
   
   const bottomRef = useRef(null);
 
@@ -177,7 +174,6 @@ Initiate contact with the Director of Instructional Technology, referencing the 
       setIsSearching(false);
     };
 
-    setWs(socket);
   };
 
   const interruptStateLoading = () => {

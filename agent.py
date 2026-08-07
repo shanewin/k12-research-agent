@@ -1,11 +1,11 @@
 import logging
 import time
 from dataclasses import asdict
-from typing import List, Optional, Dict, Callable
+from typing import Optional, Callable
 from anthropic import Anthropic
 import concurrent.futures
 
-from config.settings import STATE_FIPS, TAVILY_API_KEY, ANTHROPIC_API_KEY
+from config.settings import TAVILY_API_KEY, ANTHROPIC_API_KEY
 from config.product_context import ProductContext
 from models.district import DistrictProfile
 from data_sources.nces import NCESClient

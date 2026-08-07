@@ -1,7 +1,7 @@
 import logging
 import datetime
 import os
-from typing import List, Set
+from typing import List
 from config.product_context import ProductContext
 from data_sources.tavily_client import K12TavilyClient
 from urllib.parse import urlparse
