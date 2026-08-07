@@ -161,6 +161,17 @@ class K12ResearchAgent:
             ]
             concurrent.futures.wait(futures)
         
+        # 5a. Contact email discovery (published addresses + district convention)
+        if profile.contacts and profile.website_url:
+            update_status(f"Finding email addresses for {len(profile.contacts)} contacts...")
+            from data_sources.email_finder import find_emails
+            try:
+                stats = find_emails(profile.contacts, profile.website_url, self.tavily)
+                profile.metadata["email_discovery"] = stats
+                update_status(f"Emails: {stats['published']} published, {stats['pattern']} inferred, {stats['none']} not found")
+            except Exception as e:
+                logger.error(f"Email discovery failed: {e}")
+
         # 5b. Local Funding Enrichment (FundFinder dataset — free, offline)
         update_status("Enriching with local funding dataset (Title I, LCFF, FRPM, poverty)...")
         from data_sources.local_funding import LocalFundingData

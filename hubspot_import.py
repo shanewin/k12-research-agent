@@ -332,14 +332,16 @@ def import_profile(client: HubSpotClient, profile: dict, skip_no_email: bool = F
             skipped += 1
             continue
         payload = contact_payload(contact, profile)
+        # Dedup by email when we have one, but always fall back to
+        # name+district — a contact first synced without an email must be
+        # updated in place when the email is discovered later, not duplicated.
+        contact_id = None
         if email:
-            # Email is the reliable dedup key
-            contact_id = client.upsert("contacts", "email", email, payload)
-        else:
-            # No email: dedup on exact name within this district before creating
+            contact_id = client.search("contacts", "email", email)
+        if not contact_id:
             contact_id = client.find_contact_by_name(payload.get("firstname", ""),
                                                      payload.get("lastname", ""), name)
-            contact_id = client.upsert_by_id("contacts", contact_id, payload)
+        contact_id = client.upsert_by_id("contacts", contact_id, payload)
         if contact_id and company_id:
             client.associate_contact_to_company(contact_id, company_id)
         imported += 1
