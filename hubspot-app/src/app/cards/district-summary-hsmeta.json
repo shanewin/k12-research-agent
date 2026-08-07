@@ -1,0 +1,11 @@
+{
+  "uid": "district_summary_card",
+  "type": "card",
+  "config": {
+    "name": "District Intelligence Summary",
+    "description": "ICP targeting, funding, and top buying signal for this district.",
+    "location": "crm.record.sidebar",
+    "objectTypes": ["companies"],
+    "entrypoint": "/app/cards/DistrictSummary.jsx"
+  }
+}
