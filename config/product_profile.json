@@ -1,0 +1,104 @@
+{
+  "company_name": "AI Literacy Tool",
+  "product_name": "AI Literacy Tool",
+  "product_category": "AI Reading Tutor / Literacy Intervention",
+  "product_subcategories": [
+    "Reading fluency practice",
+    "Lexile progress monitoring",
+    "Comprehension assessment",
+    "EL reading support",
+    "SPED/dyslexia intervention support"
+  ],
+  "one_liner": "An AI-powered reading tutor that listens as K-8 students read aloud and gives real-time feedback on fluency, pronunciation, and comprehension \u2014 the practice and intervention layer that closes the gaps reading screeners identify.",
+  "primary_keywords": [
+    "reading fluency",
+    "AI reading tutor",
+    "literacy intervention",
+    "science of reading",
+    "oral reading fluency",
+    "guided reading practice",
+    "Lexile",
+    "reading intervention"
+  ],
+  "secondary_keywords": [
+    "SB 114",
+    "reading screener",
+    "dyslexia intervention",
+    "struggling readers",
+    "read-aloud practice",
+    "voice recognition reading",
+    "supplemental literacy",
+    "reading proficiency"
+  ],
+  "direct_competitors": [
+    "Amira Learning",
+    "Reading Plus",
+    "Raz-Plus"
+  ],
+  "adjacent_competitors": [
+    "mCLASS DIBELS",
+    "Multitudes",
+    "ROAR",
+    "i-Ready",
+    "MAP Growth",
+    "Renaissance STAR",
+    "Benchmark Advance",
+    "HMH Into Reading"
+  ],
+  "primary_buyer_titles": [
+    "Director of Curriculum and Instruction",
+    "Chief Academic Officer",
+    "Director of Literacy",
+    "ELA Coordinator"
+  ],
+  "secondary_buyer_titles": [
+    "Director of Special Education",
+    "Director of English Learner Programs",
+    "Director of Educational Technology",
+    "MTSS Coordinator"
+  ],
+  "executive_sponsor_titles": [
+    "Superintendent",
+    "Assistant Superintendent of Educational Services"
+  ],
+  "board_agenda_triggers": [
+    "literacy",
+    "reading intervention",
+    "SB 114",
+    "reading screener",
+    "dyslexia",
+    "ELA scores",
+    "science of reading",
+    "reading proficiency",
+    "MTSS",
+    "tutoring",
+    "early literacy",
+    "CAASPP ELA"
+  ],
+  "board_agenda_anti_triggers": [
+    "math curriculum adoption",
+    "athletics"
+  ],
+  "rfp_keywords": [
+    "reading intervention",
+    "supplemental literacy program",
+    "tutoring services",
+    "reading assessment",
+    "progress monitoring",
+    "intervention software"
+  ],
+  "relevant_funding_sources": [
+    "Title I Part A",
+    "LCFF Supplemental & Concentration Grants",
+    "Title III (English Language Acquisition)",
+    "IDEA Part B",
+    "Title IV Part A (EdTech)",
+    "ELO-P (Expanded Learning Opportunities)",
+    "SB 114 literacy screener funds"
+  ],
+  "ideal_enrollment_min": 1000,
+  "ideal_enrollment_max": 100000,
+  "title_i_preference": "preferred",
+  "typical_deal_size": "10k_50k",
+  "typical_sales_cycle_months": 6
+}

@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Brain, FileText, Activity, ShieldCheck, MapPin, Users, Zap, ExternalLink, ChevronDown, Settings, Plus, DollarSign } from 'lucide-react';
+import { Search, Brain, FileText, Activity, ShieldCheck, MapPin, Users, Zap, ExternalLink, ChevronDown, DollarSign } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import './App.css';
 import { API_BASE, WS_BASE } from './apiConfig';
-import TemplateManager from './TemplateManager';
 import ProspectView from './ProspectView';
 import DashboardView from './DashboardView';
 import DossiersView from './DossiersView';
@@ -22,9 +21,6 @@ function App() {
   const [districts, setDistricts] = useState([]);
   const [isLoadingDistricts, setIsLoadingDistricts] = useState(false);
   const [abortController, setAbortController] = useState(null);
-  const [productType, setProductType] = useState('');
-  const [templates, setTemplates] = useState({});
-  const [showTemplateManager, setShowTemplateManager] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [thinkerLogs, setThinkerLogs] = useState([]);
   const [profile, setProfile] = useState(null);
@@ -33,75 +29,6 @@ function App() {
   const [ws, setWs] = useState(null);
   
   const bottomRef = useRef(null);
-
-  useEffect(() => {
-    fetchTemplates();
-  }, []);
-
-  useEffect(() => {
-    if (state && state.length === 2) {
-      const controller = new AbortController();
-      setAbortController(controller);
-      setIsLoadingDistricts(true);
-      
-      fetch(`${API_BASE}/api/districts/${state}`, { signal: controller.signal })
-        .then(res => res.json())
-        .then(data => {
-          console.log(`Fetched ${data.length} districts for ${state}`);
-          setDistricts(data);
-          setFilteredDistricts([]);
-          setIsLoadingDistricts(false);
-          setAbortController(null);
-        })
-        .catch(err => {
-          if (err.name === 'AbortError') {
-            console.log('Fetch aborted');
-          } else {
-            console.error("Error fetching districts:", err);
-          }
-          setIsLoadingDistricts(false);
-          setAbortController(null);
-        });
-    } else {
-      setDistricts([]);
-      setFilteredDistricts([]);
-    }
-  }, [state]);
-
-  const fetchTemplates = () => {
-    fetch(`${API_BASE}/api/templates`)
-      .then(res => res.json())
-      .then(data => {
-        setTemplates(data);
-        // Default to the AI Literacy Tool profile when present, else the first template
-        const slugs = Object.keys(data);
-        if (slugs.length > 0 && !data[productType]) {
-          setProductType(data['ai_literacy_tool'] ? 'ai_literacy_tool' : slugs[0]);
-        }
-      })
-      .catch(err => console.error("Error fetching templates:", err));
-  };
-
-  const handleSaveTemplate = (template) => {
-    fetch(`${API_BASE}/api/templates`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(template)
-    })
-      .then(res => res.json())
-      .then(() => {
-        fetchTemplates();
-        setShowTemplateManager(false);
-      });
-  };
-
-  const handleDeleteTemplate = (slug) => {
-    fetch(`${API_BASE}/api/templates/${slug}`, {
-      method: 'DELETE'
-    })
-      .then(res => res.json())
-      .then(() => fetchTemplates());
-  };
 
   useEffect(() => {
     if (district.length > 0) {
@@ -172,7 +99,6 @@ function App() {
     if (params.get('demo') === 'true') {
       setDistrict('Demo Unified School District');
       setState('CA');
-      setProductType('k12-tutoring-platform');
       
       const mockProfile = {
         district_name: "Demo Unified School District",
@@ -222,8 +148,7 @@ Initiate contact with the Director of Instructional Technology, referencing the 
     socket.onopen = () => {
       socket.send(JSON.stringify({
         district_name: district,
-        state_code: state,
-        product_type: productType
+        state_code: state
       }));
     };
 
@@ -314,11 +239,7 @@ Initiate contact with the Director of Instructional Technology, referencing the 
           </button>
         </nav>
         <div className="nav-actions">
-          <button className="btn-icon-labeled" onClick={() => setShowTemplateManager(true)}>
-            <Settings size={18} />
-            <span>Product Templates</span>
-          </button>
-          <div className="status-badge">CA EDITION</div>
+          <div className="status-badge">AI LITERACY TOOL · CA</div>
         </div>
       </header>
 
@@ -338,7 +259,6 @@ Initiate contact with the Director of Instructional Technology, referencing the 
         {view === 'prospect' && (
           <ProspectView
             onResearch={handleProspectResearch}
-            productType={productType}
             onOpenDossier={openDossier}
           />
         )}
@@ -372,7 +292,7 @@ Initiate contact with the Director of Instructional Technology, referencing the 
               {/* Row 1: District (state is locked to California) */}
               <div className="form-row">
                 <div className="field">
-                  <label>1. California School District</label>
+                  <label>California School District</label>
                   <div className="autocomplete-wrapper large">
                     <input
                       type="text"
@@ -409,34 +329,6 @@ Initiate contact with the Director of Instructional Technology, referencing the 
                 </div>
               </div>
 
-              {/* Row 2: Product */}
-              <div className="form-row">
-                <div className="field">
-                  <label>2. Research Lens (Product Type)</label>
-                  <div className="select-row">
-                    <div className="select-wrapper large" style={{ flex: 1 }}>
-                      <select 
-                        value={productType}
-                        onChange={(e) => setProductType(e.target.value)}
-                        className="custom-select"
-                      >
-                        {Object.entries(templates).map(([slug, t]) => (
-                          <option key={slug} value={slug}>{t.product_name || slug}</option>
-                        ))}
-                      </select>
-                      <ChevronDown className="select-icon" size={16} />
-                    </div>
-                    <button 
-                      type="button"
-                      className="btn-secondary add-custom" 
-                      onClick={() => setShowTemplateManager(true)}
-                    >
-                      <Plus size={16} />
-                      Add Custom
-                    </button>
-                  </div>
-                </div>
-              </div>
             </div>
 
             <div className="form-footer">
@@ -483,14 +375,6 @@ Initiate contact with the Director of Instructional Technology, referencing the 
         {view === 'research' && profile && <DossierPanel profile={profile} />}
       </main>
 
-      {showTemplateManager && (
-        <TemplateManager 
-          templates={templates}
-          onSave={handleSaveTemplate}
-          onDelete={handleDeleteTemplate}
-          onClose={() => setShowTemplateManager(false)}
-        />
-      )}
     </div>
   );
 }

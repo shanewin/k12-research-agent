@@ -4,7 +4,7 @@
 
 ## The story behind this project
 
-A client selling an AI literacy product hired me to build their California outreach engine. Their problem is the problem every EdTech company has: there are 1,860 school districts in California, and maybe 50 of them are worth a sales rep's time *this quarter*. Which 50? And once you know, what do you say to them?
+A client hired me to build the outreach engine for their AI literacy tool — one product, sold exclusively into California school districts. Everything in this repo was purpose-built for that engagement: the target profiles encode *that product's* funding logic, and the datasets are California's. Their problem is the problem every EdTech company has: there are 1,860 school districts in California, and maybe 50 of them are worth a sales rep's time *this quarter*. Which 50? And once you know, what do you say to them?
 
 Answering that by hand takes an analyst weeks. This platform does it in an afternoon:
 
@@ -12,7 +12,7 @@ Answering that by hand takes an analyst weeks. This platform does it in an after
 2. **Research** the top targets with an AI agent that reads district websites, board meeting minutes, and local news.
 3. **Sync** the results into HubSpot as companies and contacts, ready for outreach.
 
-I've open-sourced it so any developer can do the same for their product: paste in your API keys, describe your product, and run it. The district data, the scoring engine, and the pipeline are product-agnostic — only the product profile changes.
+I've open-sourced it as-built. It is deliberately **not** a configurable multi-product platform — it's the real, working system from one engagement. If you sell something else into K-12, reusing it means changing exactly two files (see [Reusing this for your own product](#reusing-this-for-your-own-product)); the pipeline, the datasets, and the CRM integration carry over unchanged.
 
 ## What it looks like
 
@@ -22,7 +22,7 @@ A single web app with four views:
 |---|---|
 | **Dashboard** | The landing page. A pipeline funnel (Universe → Targets → Researched → Contacts → In HubSpot), your hottest unresearched targets, recent research reports, and a breakdown of which target profiles your market matches. |
 | **Prospect** | All 1,860 districts in a sortable table with an ICP score badge on every row. Filter by target profile, enrollment, poverty, funding, county. Click any row to open a CRM-style record panel with 12 funding metrics and one-click actions. |
-| **Research** | Pick a district, pick your product, hit go. A live activity feed shows the AI agent working; a full intelligence dossier appears when it finishes. |
+| **Research** | Pick a district and hit go. A live activity feed shows the AI agent working; a full intelligence dossier appears when it finishes. |
 | **Dossiers** | The library of every research report: ICP score, buying signals, decision-makers, and a written brief — with HubSpot sync status on each. |
 
 ## How the scoring works (no AI, no cost)
@@ -87,16 +87,24 @@ Open http://localhost:5173. The Dashboard and Prospect views work immediately �
 
 > If port 8000 is taken on your machine, run the backend on another port and put `VITE_API_URL=http://localhost:<port>` in `frontend/.env.local`.
 
-## Make it yours: the product profile
+## Reusing this for your own product
 
-The whole platform researches through the lens of **your product**. That lens is a product profile: keywords to search for, board meeting topics that signal buying intent, competitor names to watch for, job titles of your buyers, and which funding sources pay for products like yours.
+This platform is single-product by design — there is no product picker, no template system, no configuration UI. The product it researches for lives in **two files**, and changing them re-aims the entire platform (search queries, board meeting triggers, scoring, batch priorities, HubSpot properties):
 
-Two ways to create one:
+**1. [`config/product_profile.json`](config/product_profile.json)** — what the AI researches for. The shipped profile is the (anonymized) AI literacy tool from the original engagement. Every field is plain English:
 
-1. **Auto-fill** (easiest): in the app, open *Product Templates → Add Custom*, paste your product's website URL, and Claude drafts the profile for you. Edit and save.
-2. **Manual**: create a template via the same form, or study the included example — an anonymized "AI Literacy Tool" profile from the original client engagement, complete with California SB 114 literacy-mandate triggers.
+| Field | What it drives |
+|---|---|
+| `primary_keywords`, `secondary_keywords` | What the web crawler and search agent look for |
+| `board_agenda_triggers` | Board meeting topics that signal buying intent (the shipped ones include California's SB 114 literacy-screener mandate — a great example of a state-policy trigger worth finding for *your* category) |
+| `direct_competitors`, `adjacent_competitors` | Vendor names the agent watches for, and whether a mention is a threat or an opening |
+| `primary_buyer_titles`, `executive_sponsor_titles` | Which contacts get prioritized |
+| `relevant_funding_sources` | The money story your reps pitch |
+| `ideal_enrollment_min/max`, `title_i_preference` | ICP scoring knobs |
 
-Then update the six target-profile rules in `local_funding.py` to match *your* ICP (a math product would key on math proficiency instead of reading, for example). That's the entire adaptation — everything else is product-agnostic.
+**2. [`data_sources/local_funding.py`](data_sources/local_funding.py) — `PROFILE_DEFINITIONS` and `_compute_profiles()`** — who counts as a target *before* any AI runs. Each of the six rules follows one pattern: **a funding stream that could legally pay for the product × a public data point proving the need**. The shipped rules key on reading proficiency because the product was a literacy tool; a math product would swap `ela_proficient_pct` for a math column (the raw CAASPP files include it), an SEL product might use suspension rates, and so on. Each rule carries a `rule` and `angle` string — update those too, since the in-app "How scoring works" explainer renders them.
+
+That's the entire adaptation. The 68-column dataset already covers funding, poverty, EL, SPED, absenteeism, and improvement status for every CA district — most K-12 products can build their ICP from columns that are already there.
 
 ## HubSpot integration
 
@@ -121,8 +129,8 @@ Everything dedupes on the district's federal NCES ID (a unique property), so the
 # Preview who's next (free)
 python scripts/batch_research.py --list --limit 20
 
-# Research the top 10 targets through your product lens
-python scripts/batch_research.py --limit 10 --product your_template_slug
+# Research the top 10 targets
+python scripts/batch_research.py --limit 10
 ```
 
 ## Adapting beyond California

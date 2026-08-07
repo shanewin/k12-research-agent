@@ -1,6 +1,9 @@
 import logging
 from agent import K12ResearchAgent
-from config.templates import AI_TEACHING_TEMPLATE
+import json, os
+from config.product_context import ProductContext
+_profile_path = os.path.join(os.path.dirname(__file__), '..', 'config', 'product_profile.json')
+AI_TEACHING_TEMPLATE = ProductContext(**json.load(open(_profile_path)))
 from output.formatters import OutputFormatter
 
 # Configure logging

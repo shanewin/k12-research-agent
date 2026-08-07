@@ -6,7 +6,7 @@ import MethodologyModal from './MethodologyModal';
 
 // FundFinder prospecting view, merged in from the Streamlit app, with the
 // Target Profile scoring engine and batch research ported from an earlier client engagement.
-function ProspectView({ onResearch, productType, onOpenDossier }) {
+function ProspectView({ onResearch, onOpenDossier }) {
   const [rows, setRows] = useState([]);
   const [profiles, setProfiles] = useState([]);
   const [activeProfiles, setActiveProfiles] = useState([]);
@@ -73,7 +73,7 @@ function ProspectView({ onResearch, productType, onOpenDossier }) {
     fetch(`${API_BASE}/api/batch/start`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ product_type: productType, limit: batchLimit, min_profiles: 1 }),
+      body: JSON.stringify({ limit: batchLimit, min_profiles: 1 }),
     })
       .then(res => res.json())
       .then(data => {

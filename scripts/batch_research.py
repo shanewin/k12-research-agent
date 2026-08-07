@@ -3,8 +3,10 @@ CLI batch research runner.
 
 Usage:
   python scripts/batch_research.py --list                    # preview targets
-  python scripts/batch_research.py --limit 10 --product moodle_lms
-  python scripts/batch_research.py --limit 50 --min-profiles 3 --product moodle_lms
+  python scripts/batch_research.py --limit 10
+  python scripts/batch_research.py --limit 50 --min-profiles 3
+
+The product lens comes from config/product_profile.json.
 
 Already-researched districts are skipped automatically, so re-running
 continues where the last batch left off. Results persist to research_results
@@ -24,7 +26,6 @@ def main():
     parser.add_argument("--list", action="store_true", help="Preview targets without researching")
     parser.add_argument("--limit", type=int, default=10, help="Number of districts (default 10)")
     parser.add_argument("--min-profiles", type=int, default=1, help="Minimum ICP profiles matched (default 1)")
-    parser.add_argument("--product", help="Product template slug (see /api/templates)")
     parser.add_argument("--delay", type=int, default=20, help="Seconds between districts (default 20)")
     args = parser.parse_args()
 
@@ -37,10 +38,7 @@ def main():
             print(f"{i:3}. [{t['profile_count']}] {t['dist_name']} — {t['profile_tags']}")
         return
 
-    if not args.product:
-        sys.exit("--product is required (a template slug, e.g. moodle_lms). Use --list to preview targets.")
-
-    result = runner.start(args.product, limit=args.limit,
+    result = runner.start(limit=args.limit,
                           min_profiles=args.min_profiles, delay_seconds=args.delay)
     if "error" in result:
         sys.exit(f"Error: {result['error']}")

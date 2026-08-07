@@ -3,7 +3,10 @@ import os
 from anthropic import Anthropic
 from data_sources.tavily_client import K12TavilyClient
 from data_sources.board_meetings import BoardMeetingIntelligence
-from config.templates import AI_TEACHING_TEMPLATE
+import json, os
+from config.product_context import ProductContext
+_profile_path = os.path.join(os.path.dirname(__file__), '..', 'config', 'product_profile.json')
+AI_TEACHING_TEMPLATE = ProductContext(**json.load(open(_profile_path)))
 from config.settings import TAVILY_API_KEY, ANTHROPIC_API_KEY
 
 logging.basicConfig(level=logging.INFO)

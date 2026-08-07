@@ -83,7 +83,7 @@ class BatchRunner:
             "total": len(self.completed) + len(self.errors) + len(self.queue) + (1 if self.current else 0),
         }
 
-    def start(self, product_type: str, limit: int = 10, min_profiles: int = 1,
+    def start(self, limit: int = 10, min_profiles: int = 1,
               delay_seconds: int = 20) -> Dict:
         with self._lock:
             if self.state == "running":
@@ -93,12 +93,11 @@ class BatchRunner:
                 return {"error": "No unresearched districts match the criteria"}
             self.reset()
             self.state = "running"
-            self.product_type = product_type
             self.started_at = datetime.now().isoformat(timespec="seconds")
             self.queue = [t["dist_name"] for t in targets]
             self._stop = False
             self._thread = threading.Thread(
-                target=self._run, args=(product_type, delay_seconds), daemon=True)
+                target=self._run, args=(delay_seconds,), daemon=True)
             self._thread.start()
             return {"started": True, "targets": self.queue}
 
@@ -108,27 +107,20 @@ class BatchRunner:
             self._stop = True
         return {"state": self.state}
 
-    def _run(self, product_type: str, delay_seconds: int):
+    def _run(self, delay_seconds: int):
         os.makedirs(LOG_DIR, exist_ok=True)
         log_path = os.path.join(LOG_DIR, f"batch_{self.started_at.replace(':', '-')}.jsonl")
 
-        from database import SessionLocal
-        from models.template import ProductTemplateModel
-        from config.product_context import ProductContext
         from agent import K12ResearchAgent
 
-        db = SessionLocal()
         try:
-            template = db.query(ProductTemplateModel).filter(
-                ProductTemplateModel.slug == product_type).first()
-        finally:
-            db.close()
-        if not template:
-            self.errors.append({"district": None, "error": f"Unknown product type: {product_type}"})
+            from main import load_product_context
+            context = load_product_context()
+        except Exception as e:
+            self.errors.append({"district": None, "error": f"Could not load product profile: {e}"})
             self.state = "idle"
             return
-
-        context = ProductContext(**template.context_data)
+        self.product_type = context.product_name
 
         while self.queue and not self._stop:
             name = self.queue.pop(0)
@@ -139,7 +131,7 @@ class BatchRunner:
                 agent = K12ResearchAgent(context)
                 profile = agent.research_district(name, "CA")
                 from main import save_research_result
-                result_id = save_research_result(profile, product_type)
+                result_id = save_research_result(profile, context.product_name)
                 entry.update({"status": "ok", "result_id": result_id,
                               "icp_score": profile.icp_score,
                               "signal_strength": profile.signal_strength,
