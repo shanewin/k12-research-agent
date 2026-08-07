@@ -1226,3 +1226,124 @@ input:focus, .custom-select:focus {
   color: var(--text-secondary, #c3cbe0);
   white-space: pre-wrap;
 }
+
+/* ===== Dossier v2: metrics, sections, findings ===== */
+.dm-tags { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.75rem; }
+.dm-tags .drawer-tag { display: inline-flex; align-items: center; gap: 0.25rem; }
+
+.dm-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+.dm-metric { display: flex; flex-direction: column; gap: 0.15rem; }
+.dm-metric-label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-secondary, #8892b0);
+  font-weight: 700;
+}
+.dm-metric-value { font-size: 1.45rem; font-weight: 800; color: var(--text-primary, #e6f1ff); line-height: 1.2; }
+.dm-metric-caption { font-size: 0.68rem; color: var(--text-secondary, #8892b0); line-height: 1.35; }
+
+.dm-section { margin-bottom: 1.25rem; padding: 0; overflow: hidden; }
+.dm-section-head {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 1.1rem 1.5rem;
+  background: transparent;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+.dm-section-head:hover { background: rgba(255, 255, 255, 0.02); }
+.dm-section-head h3 { margin: 0; font-size: 1.1rem; }
+.dm-count {
+  background: rgba(100, 255, 218, 0.12);
+  color: var(--accent-color);
+  border-radius: 999px;
+  padding: 0.1rem 0.55rem;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+.dm-subtitle { font-size: 0.78rem; color: var(--text-secondary, #8892b0); margin-left: auto; }
+.dm-section-body { padding: 0 1.5rem 1.4rem; }
+
+.dm-inline-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.dm-list { display: flex; flex-direction: column; gap: 0.6rem; }
+.dm-item {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.75rem 0.9rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+}
+.dm-strength {
+  flex-shrink: 0;
+  align-self: flex-start;
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--text-secondary, #8892b0);
+}
+.dm-strength.high { background: rgba(255, 107, 107, 0.18); color: #ff8787; }
+.dm-strength.medium { background: rgba(255, 200, 87, 0.18); color: #ffc857; }
+.dm-strength.low { background: rgba(100, 255, 218, 0.12); color: var(--accent-color); }
+.dm-item-body { min-width: 0; }
+.dm-item-title { font-weight: 700; font-size: 0.92rem; margin-bottom: 0.2rem; }
+.dm-item-detail { font-size: 0.83rem; line-height: 1.55; color: var(--text-secondary, #c3cbe0); }
+.dm-item-meta { font-size: 0.7rem; color: var(--text-secondary, #8892b0); margin-top: 0.3rem; }
+.dm-item-meta a { color: var(--accent-color); }
+
+.dm-bullets { margin: 0 0 1rem; padding-left: 1.1rem; }
+.dm-bullets li { font-size: 0.85rem; line-height: 1.6; color: var(--text-secondary, #c3cbe0); margin-bottom: 0.3rem; }
+
+.dm-strategy { margin-top: 0.9rem; }
+.dm-strategy-label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  font-weight: 700;
+  color: var(--accent-color);
+  margin-bottom: 0.35rem;
+}
+.dm-prose { margin: 0; font-size: 0.86rem; line-height: 1.65; color: var(--text-secondary, #c3cbe0); }
+.dm-clamp { display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden; }
+.dm-more {
+  background: none;
+  border: none;
+  color: var(--accent-color);
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0.3rem 0;
+}
+.dm-vendors { margin-top: 0.5rem; }
+.dm-empty-action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  font-size: 0.85rem;
+  color: var(--text-secondary, #8892b0);
+}
+.badge.strength-medium { border-color: #ffc857; color: #ffc857; }
+.badge.strength-low { border-color: var(--accent-color); color: var(--accent-color); }
