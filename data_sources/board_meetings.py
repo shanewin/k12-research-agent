@@ -64,10 +64,59 @@ class BoardMeetingIntelligence:
         )
         return report
 
+    # Pre-computed CA board-platform map (ported from an earlier client engagement):
+    # 904 districts -> platform + direct portal URL. Skips discovery searches.
+    _platform_map = None
+
+    @classmethod
+    def _load_platform_map(cls) -> Dict:
+        if cls._platform_map is None:
+            import os
+            path = os.path.join(os.path.dirname(__file__), "..", "data", "board_platform_map.json")
+            try:
+                with open(path) as f:
+                    cls._platform_map = json.load(f)
+                logger.info(f"Loaded board platform map ({len(cls._platform_map)} districts)")
+            except Exception as e:
+                logger.warning(f"Board platform map unavailable: {e}")
+                cls._platform_map = {}
+        return cls._platform_map
+
+    def _lookup_platform_map(self, district_name: str, state: str) -> Optional[str]:
+        """Return a direct board-portal URL from the pre-computed CA map, if known."""
+        if state.upper() != "CA":
+            return None
+        from data_sources.local_funding import LocalFundingData
+        row = LocalFundingData.lookup(district_name=district_name, state=state)
+        if not row:
+            return None
+        entry = self._load_platform_map().get((row.get("ncesid") or "").strip())
+        if not entry:
+            return None
+        platform = entry.get("platform")
+        url = None
+        if platform == "boarddocs":
+            url = entry.get("boarddocs_url")
+        elif platform == "simbli":
+            url = entry.get("simbli_url")
+        elif platform == "self_hosted":
+            pages = entry.get("board_pages") or []
+            url = pages[0] if pages else None
+        if url and not url.startswith("http"):
+            url = f"https://{url}"
+        if url:
+            logger.info(f"Board platform map hit: {district_name} -> {platform} ({url})")
+        return url
+
     def discover_board_page(self, district_name: str, state: str) -> Optional[str]:
         """
         Powerful discovery using multi-step search and site mapping.
+        Checks the pre-computed CA platform map first (no API calls).
         """
+        mapped = self._lookup_platform_map(district_name, state)
+        if mapped:
+            return mapped
+
         # Strategy A: Targeted Search
         query = f'"{district_name}" {state} board meeting agenda minutes site:.org OR site:.us OR site:.gov OR site:.edu'
         results = self.tavily.search(query, search_depth="advanced", max_results=15)
@@ -134,7 +183,7 @@ class BoardMeetingIntelligence:
         [{{"date": "YYYY-MM-DD", "title": "...", "url": "..."}}]"""
         
         response = self.anthropic.messages.create(
-            model="claude-3-haiku-20240307",
+            model="claude-haiku-4-5",
             max_tokens=1000,
             messages=[{"role": "user", "content": prompt}]
         )
@@ -277,7 +326,7 @@ Return ONLY valid JSON:
 
         try:
             response = self.anthropic.messages.create(
-                model="claude-3-haiku-20240307",
+                model="claude-haiku-4-5",
                 max_tokens=4096,
                 system=system_prompt,
                 messages=[{"role": "user", "content": user_prompt}]

@@ -116,43 +116,44 @@ class NCESClient:
         except Exception as e:
             logger.error(f"Error fetching districts by state: {e}")
             
-        # Fallback if Urban Institute API is down or times out
+        # Fallback if Urban Institute API is down or times out:
+        # use the bundled national directory (built by scripts/build_national_district_list.py)
         if not districts:
-            logger.warning(f"Using fallback district list for state {state_code} due to empty API response")
-            if state_code.upper() == "CA":
-                districts = [
-                    {"id": "0000001", "name": "Los Angeles Unified"},
-                    {"id": "0000002", "name": "San Diego Unified"},
-                    {"id": "0000003", "name": "Fresno Unified"},
-                    {"id": "0000004", "name": "Long Beach Unified"},
-                    {"id": "0000005", "name": "San Francisco Unified"},
-                    {"id": "demo_usd", "name": "Demo Unified School District"}
-                ]
-            elif state_code.upper() == "TX":
-                 districts = [
-                    {"id": "0000006", "name": "Houston ISD"},
-                    {"id": "0000007", "name": "Dallas ISD"},
-                    {"id": "0000008", "name": "Cypress-Fairbanks ISD"}
-                ]
-            elif state_code.upper() == "NY":
-                 districts = [
-                    {"id": "0000009", "name": "New York City Public Schools"},
-                    {"id": "0000010", "name": "Buffalo Public Schools"}
-                ]
-            else:
-                 districts = [
-                    {"id": "demo_usd", "name": f"Demo District ({state_code.upper()})"}
-                ]
-            
+            logger.warning(f"API unavailable for state {state_code}; using bundled national district list")
+            districts = self._load_bundled_districts(state_code)
+
+        if not districts:
+            districts = [{"id": "demo_usd", "name": f"Demo District ({state_code.upper()})"}]
+
+
         # Sort districts alphabetically by name
         districts.sort(key=lambda x: x['name'])
+        return districts
+
+    def _load_bundled_districts(self, state_code: str) -> List[Dict]:
+        """Offline fallback: read the bundled national CCD directory CSV."""
+        import csv
+        import os
+        path = os.path.join(os.path.dirname(__file__), "..", "data", "districts_national.csv")
+        if not os.path.exists(path):
+            logger.warning("Bundled district list not found (run scripts/build_national_district_list.py)")
+            return []
+        state = state_code.upper()
+        districts = []
+        try:
+            with open(path, newline="") as f:
+                for row in csv.DictReader(f):
+                    if row.get("state") == state:
+                        districts.append({"id": row["leaid"], "name": row["name"]})
+        except Exception as e:
+            logger.error(f"Failed reading bundled district list: {e}")
         return districts
 
     def _fetch_directory(self, name: str, state_fips: str) -> Optional[Dict]:
         for year in range(LATEST_NCES_YEAR, LATEST_NCES_YEAR - 3, -1):
             url = f"{self.BASE_URL}/school-districts/ccd/directory/{year}/?district_name={name}&fips={state_fips}"
             try:
-                response = requests.get(url)
+                response = requests.get(url, timeout=20)
                 response.raise_for_status()
                 results = response.json().get("results", [])
                 if results:
@@ -169,7 +170,7 @@ class NCESClient:
         for y in range(year, year - 6, -1):
             url = f"{self.BASE_URL}/school-districts/ccd/finance/{y}/?leaid={leaid}"
             try:
-                response = requests.get(url)
+                response = requests.get(url, timeout=20)
                 response.raise_for_status()
                 results = response.json().get("results", [])
                 if results:
@@ -182,7 +183,7 @@ class NCESClient:
     def _fetch_enrollment(self, leaid: str, year: int) -> Optional[Dict]:
         url = f"{self.BASE_URL}/school-districts/ccd/enrollment/{year}/?leaid={leaid}"
         try:
-            response = requests.get(url)
+            response = requests.get(url, timeout=20)
             response.raise_for_status()
             results = response.json().get("results", [])
             return results[0] if results else None

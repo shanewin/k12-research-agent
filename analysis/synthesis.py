@@ -18,7 +18,7 @@ class SynthesisEngine:
         
         try:
             response = self.claude.messages.create(
-                model="claude-3-haiku-20240307",
+                model="claude-haiku-4-5",
                 max_tokens=4096,
                 system="You are an expert K12 EdTech sales consultant. Synthesize the provided data into a punchy, actionable intelligence brief.",
                 messages=[{"role": "user", "content": prompt}]

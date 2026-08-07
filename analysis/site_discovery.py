@@ -102,7 +102,7 @@ When you believe you have found and saved all the necessary URLs, you can output
             logger.info(f"Agentic Discovery Loop {loops}/{max_loops}...")
             
             response = self.anthropic.messages.create(
-                model="claude-3-haiku-20240307",
+                model="claude-haiku-4-5",
                 max_tokens=1000,
                 system=system_prompt,
                 messages=messages,

@@ -86,7 +86,7 @@ Return ONLY valid JSON as specified in the blueprint schema."""
 
         try:
             response = self.anthropic.messages.create(
-                model="claude-3-haiku-20240307",
+                model="claude-haiku-4-5",
                 max_tokens=4000,
                 system=system_prompt,
                 messages=[{"role": "user", "content": user_prompt}]

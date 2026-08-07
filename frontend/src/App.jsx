@@ -1,20 +1,24 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Brain, FileText, Activity, ShieldCheck, MapPin, Users, Zap, ExternalLink, ChevronDown, Settings, Plus } from 'lucide-react';
+import { Search, Brain, FileText, Activity, ShieldCheck, MapPin, Users, Zap, ExternalLink, ChevronDown, Settings, Plus, DollarSign } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import './App.css';
+import { API_BASE, WS_BASE } from './apiConfig';
 import TemplateManager from './TemplateManager';
+import ProspectView from './ProspectView';
+import DashboardView from './DashboardView';
+import DossiersView from './DossiersView';
+import DossierPanel from './DossierPanel';
+import { LayoutDashboard } from 'lucide-react';
 
-const STATES = [
-  "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA", 
-  "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD", 
-  "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ", 
-  "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC", 
-  "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY", "DC"
-].sort();
+// California-specific build: the platform targets CA districts only.
+const STATE = 'CA';
 
 function App() {
   const [district, setDistrict] = useState('');
-  const [state, setState] = useState('');
+  const [state, setState] = useState(STATE);
+  const [view, setView] = useState('dashboard'); // 'dashboard' | 'prospect' | 'research' | 'dossiers'
+  const [dossierId, setDossierId] = useState(null);
+  const [fundingRow, setFundingRow] = useState(null);
   const [districts, setDistricts] = useState([]);
   const [isLoadingDistricts, setIsLoadingDistricts] = useState(false);
   const [abortController, setAbortController] = useState(null);
@@ -40,7 +44,7 @@ function App() {
       setAbortController(controller);
       setIsLoadingDistricts(true);
       
-      fetch(`http://localhost:8000/api/districts/${state}`, { signal: controller.signal })
+      fetch(`${API_BASE}/api/districts/${state}`, { signal: controller.signal })
         .then(res => res.json())
         .then(data => {
           console.log(`Fetched ${data.length} districts for ${state}`);
@@ -65,21 +69,21 @@ function App() {
   }, [state]);
 
   const fetchTemplates = () => {
-    fetch('http://localhost:8000/api/templates')
+    fetch(`${API_BASE}/api/templates`)
       .then(res => res.json())
       .then(data => {
         setTemplates(data);
-        // If current productType is empty and we have templates, select the first one
+        // Default to the AI Literacy Tool profile when present, else the first template
         const slugs = Object.keys(data);
         if (slugs.length > 0 && !data[productType]) {
-          setProductType(slugs[0]);
+          setProductType(data['ai_literacy_tool'] ? 'ai_literacy_tool' : slugs[0]);
         }
       })
       .catch(err => console.error("Error fetching templates:", err));
   };
 
   const handleSaveTemplate = (template) => {
-    fetch('http://localhost:8000/api/templates', {
+    fetch(`${API_BASE}/api/templates`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(template)
@@ -92,7 +96,7 @@ function App() {
   };
 
   const handleDeleteTemplate = (slug) => {
-    fetch(`http://localhost:8000/api/templates/${slug}`, {
+    fetch(`${API_BASE}/api/templates/${slug}`, {
       method: 'DELETE'
     })
       .then(res => res.json())
@@ -130,6 +134,38 @@ function App() {
       bottomRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [thinkerLogs]);
+
+  // Deep-link support: /?district=Barstow+Unified
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const linkedDistrict = params.get('district');
+    if (linkedDistrict && params.get('demo') !== 'true') {
+      setDistrict(linkedDistrict);
+      setView('research');
+    }
+  }, []);
+
+  // Prospect table / dashboard -> Research handoff (carries the funding row along)
+  const handleProspectResearch = (row) => {
+    const name = row.dist_name || row.name;
+    setDistrict(name);
+    setProfile(null);
+    setView('research');
+    if (row.enroll !== undefined) {
+      setFundingRow(row);
+    } else if (row.ncesid || row.leaid) {
+      // Partial row (e.g. dashboard hot target) — hydrate from the funding API
+      fetch(`${API_BASE}/api/funding/CA/${row.ncesid || row.leaid}`)
+        .then(res => res.json())
+        .then(setFundingRow)
+        .catch(() => setFundingRow(null));
+    }
+  };
+
+  const openDossier = (id) => {
+    setDossierId(id);
+    setView('dossiers');
+  };
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -181,7 +217,7 @@ Initiate contact with the Director of Instructional Technology, referencing the 
     setProfile(null);
 
     // Connect to WebSocket
-    const socket = new WebSocket('ws://localhost:8000/ws/research');
+    const socket = new WebSocket(`${WS_BASE}/ws/research`);
     
     socket.onopen = () => {
       socket.send(JSON.stringify({
@@ -249,54 +285,98 @@ Initiate contact with the Director of Instructional Technology, referencing the 
       <header className="main-header">
         <div className="logo">
           <Brain className="accent" size={32} />
-          <h1>K12 Research <span>Agent</span></h1>
+          <h1>California K12 <span>Intelligence</span></h1>
         </div>
+        <nav className="view-tabs">
+          <button
+            className={`view-tab ${view === 'dashboard' ? 'active' : ''}`}
+            onClick={() => setView('dashboard')}
+          >
+            <LayoutDashboard size={16} /> Dashboard
+          </button>
+          <button
+            className={`view-tab ${view === 'prospect' ? 'active' : ''}`}
+            onClick={() => setView('prospect')}
+          >
+            <DollarSign size={16} /> Prospect
+          </button>
+          <button
+            className={`view-tab ${view === 'research' ? 'active' : ''}`}
+            onClick={() => setView('research')}
+          >
+            <Brain size={16} /> Research
+          </button>
+          <button
+            className={`view-tab ${view === 'dossiers' ? 'active' : ''}`}
+            onClick={() => { setDossierId(null); setView('dossiers'); }}
+          >
+            <FileText size={16} /> Dossiers
+          </button>
+        </nav>
         <div className="nav-actions">
           <button className="btn-icon-labeled" onClick={() => setShowTemplateManager(true)}>
             <Settings size={18} />
             <span>Product Templates</span>
           </button>
-          <div className="status-badge">V1.1 ACTIVE</div>
+          <div className="status-badge">CA EDITION</div>
         </div>
       </header>
 
       <main className="main-content">
+        {view === 'dashboard' && (
+          <DashboardView
+            onGoProspect={() => setView('prospect')}
+            onResearchDistrict={handleProspectResearch}
+            onOpenDossier={openDossier}
+          />
+        )}
+
+        {view === 'dossiers' && (
+          <DossiersView selectedId={dossierId} onSelect={setDossierId} />
+        )}
+
+        {view === 'prospect' && (
+          <ProspectView
+            onResearch={handleProspectResearch}
+            productType={productType}
+            onOpenDossier={openDossier}
+          />
+        )}
+
+        {view === 'research' && (
         <div className="centered-search">
           <div className="search-card card">
             <div className="form-header">
               <Search className="accent" size={24} />
               <h2>Intelligence Scan Setup</h2>
             </div>
-            
-            <div className="form-layout">
-              {/* Row 1: State */}
-              <div className="form-row">
-                <div className="field">
-                  <label>1. Target State</label>
-                  <div className="select-wrapper large">
-                    <select 
-                      value={state}
-                      onChange={(e) => setState(e.target.value)}
-                      className="custom-select"
-                    >
-                      <option value="">Select a State...</option>
-                      {STATES.map(s => (
-                        <option key={s} value={s}>{s}</option>
-                      ))}
-                    </select>
-                    <ChevronDown className="select-icon" size={16} />
-                  </div>
+
+            {fundingRow && fundingRow.dist_name === district && (
+              <div className="funding-strip">
+                <div className="funding-strip-title">
+                  <DollarSign size={14} className="accent" />
+                  <span>Funding Profile — {fundingRow.dist_name}</span>
+                </div>
+                <div className="funding-chips">
+                  <div className="funding-chip"><label>Enrollment</label><span>{Math.round(fundingRow.enroll).toLocaleString()}</span></div>
+                  <div className="funding-chip"><label>FRPM</label><span>{parseFloat(fundingRow.frpm_pct) >= 0 ? `${parseFloat(fundingRow.frpm_pct).toFixed(1)}%` : '—'}</span></div>
+                  <div className="funding-chip"><label>Fed $/Pupil</label><span>${Math.round(fundingRow.rev_fed_pp).toLocaleString()}</span></div>
+                  <div className="funding-chip"><label>Title I</label><span>{parseFloat(fundingRow.title_i_amount) > 0 ? `$${(fundingRow.title_i_amount / 1e6).toFixed(1)}M` : '—'}</span></div>
+                  <div className="funding-chip"><label>LCFF S+C</label><span>{parseFloat(fundingRow.lcff_supp_conc_total) > 0 ? `$${(fundingRow.lcff_supp_conc_total / 1e6).toFixed(1)}M` : '—'}</span></div>
+                  <div className="funding-chip"><label>{(fundingRow.county || '').replace(' County', '')}</label><span>{fundingRow.urbanicity || 'CA'}</span></div>
                 </div>
               </div>
+            )}
 
-              {/* Row 2: District */}
+            <div className="form-layout">
+              {/* Row 1: District (state is locked to California) */}
               <div className="form-row">
                 <div className="field">
-                  <label>2. School District</label>
+                  <label>1. California School District</label>
                   <div className="autocomplete-wrapper large">
-                    <input 
-                      type="text" 
-                      placeholder={state ? `Search ${state} districts...` : "Select a state first"}
+                    <input
+                      type="text"
+                      placeholder="Search 1,860 California districts..."
                       value={district}
                       onChange={(e) => setDistrict(e.target.value)}
                       onFocus={() => setShowSuggestions(true)}
@@ -329,10 +409,10 @@ Initiate contact with the Director of Instructional Technology, referencing the 
                 </div>
               </div>
 
-              {/* Row 3: Product */}
+              {/* Row 2: Product */}
               <div className="form-row">
                 <div className="field">
-                  <label>3. Research Lens (Product Type)</label>
+                  <label>2. Research Lens (Product Type)</label>
                   <div className="select-row">
                     <div className="select-wrapper large" style={{ flex: 1 }}>
                       <select 
@@ -398,54 +478,9 @@ Initiate contact with the Director of Instructional Technology, referencing the 
             </div>
           </div>
         </div>
-
-        {profile && (
-          <div className="dossier-panel animate-fade-in">
-            <div className="dossier-header card">
-              <div className="dossier-title">
-                <div className="badge strength-high">{profile.signal_strength} STRENGTH</div>
-                <h2>{profile.district_name} Intelligence Dossier</h2>
-                <div className="meta-row">
-                  <span className="meta-item"><MapPin size={14} /> {profile.state}</span>
-                  <span className="meta-item"><Users size={14} /> {profile.icp_score} ICP Score</span>
-                </div>
-              </div>
-              <div className="score-circle">
-                <div className="score-value">{profile.icp_score}</div>
-                <div className="score-label">ICP</div>
-              </div>
-            </div>
-
-            <div className="dossier-grid" style={{ gridTemplateColumns: '1fr' }}>
-              <div className="card buying-card">
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
-                  <ShieldCheck size={20} className="accent" />
-                  <h3 style={{ margin: 0, fontSize: '1.25rem' }}>Buying Profile & Recommendations</h3>
-                </div>
-                {profile.buying_profile && (
-                  <div className="profile-details" style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
-                    <div style={{ flex: '1', minWidth: '300px' }}>
-                      <div className="profile-pill">{profile.buying_profile.style}</div>
-                      <p><strong>Justification:</strong> {profile.buying_profile.justification}</p>
-                    </div>
-                    <div style={{ flex: '1', minWidth: '300px' }}>
-                      <p style={{ color: 'var(--accent-color)' }}><strong>Sales Strategy:</strong></p>
-                      <p>{profile.buying_profile.recommended_sales_strategy}</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="card summary-card markdown-container" style={{ padding: '2.5rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '1rem' }}>
-                  <FileText size={20} className="accent" />
-                  <h3 style={{ margin: 0, fontSize: '1.25rem' }}>Full Intelligence Brief</h3>
-                </div>
-                <ReactMarkdown>{profile.intelligence_brief || 'Analyzing...'}</ReactMarkdown>
-              </div>
-            </div>
-          </div>
         )}
+
+        {view === 'research' && profile && <DossierPanel profile={profile} />}
       </main>
 
       {showTemplateManager && (

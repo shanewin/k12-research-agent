@@ -144,6 +144,11 @@ class K12ResearchAgent:
             ]
             concurrent.futures.wait(futures)
         
+        # 5b. Local Funding Enrichment (FundFinder dataset — free, offline)
+        update_status("Enriching with local funding dataset (Title I, LCFF, FRPM, poverty)...")
+        from data_sources.local_funding import LocalFundingData
+        LocalFundingData.enrich_profile(profile)
+
         # 6. USAC E-Rate Integration (V1.1)
         if profile.nces_id:
             update_status("V1.1: Pulling USAC E-Rate funding data...")

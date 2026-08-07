@@ -116,7 +116,7 @@ class LeadershipIntelligence:
             {{"personnel": [{{"name": "Actual Person Name", "title": "Job Title"}}]}}"""
             
             response = self.claude.messages.create(
-                model="claude-3-haiku-20240307",
+                model="claude-haiku-4-5",
                 max_tokens=4000, # Increased to handle full roster
                 messages=[{"role": "user", "content": prompt}]
             )
@@ -202,7 +202,7 @@ class LeadershipIntelligence:
         Return ONLY the URL as a string. If absolutely no reasonable match exists, return 'NONE'."""
         
         response = self.claude.messages.create(
-            model="claude-3-haiku-20240307",
+            model="claude-haiku-4-5",
             max_tokens=200,
             messages=[{"role": "user", "content": prompt}]
         )
@@ -232,7 +232,7 @@ class LeadershipIntelligence:
                 "X-RapidAPI-Host": self.rapid_host
             }
             
-            response = requests.get(url, headers=headers)
+            response = requests.get(url, headers=headers, timeout=30)
             if response.status_code == 401:
                 logger.error("LinkedIn Scraper failed with 401. Check RapidAPI key/subscription.")
                 return None
@@ -275,7 +275,7 @@ class LeadershipIntelligence:
             """
             
             verification = self.claude.messages.create(
-                model="claude-3-haiku-20240307",
+                model="claude-haiku-4-5",
                 max_tokens=600,
                 messages=[{"role": "user", "content": prompt}]
             )

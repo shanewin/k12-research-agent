@@ -10,7 +10,7 @@ from config.product_context import ProductContext
 logger = logging.getLogger(__name__)
 
 # Use a stable model name
-CLAUDE_MODEL = "claude-3-haiku-20240307"
+CLAUDE_MODEL = "claude-haiku-4-5"
 
 class SignalDetector:
     def __init__(self, tavily_client: K12TavilyClient, anthropic_client: Anthropic):
@@ -49,7 +49,7 @@ Prioritize:
 Return ONLY valid JSON array of strings: ["query1", "query2", "query3"]"""
 
         response = self.claude.messages.create(
-            model="claude-3-haiku-20240307",
+            model="claude-haiku-4-5",
             max_tokens=1000,
             messages=[{"role": "user", "content": prompt}]
         )

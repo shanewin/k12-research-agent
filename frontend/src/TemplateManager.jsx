@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { X, Save, Trash2, Plus, Sparkles } from 'lucide-react';
+import { API_BASE } from './apiConfig';
 
 const TemplateManager = ({ templates, onSave, onDelete, onClose }) => {
   const [formData, setFormData] = useState({
@@ -21,7 +22,7 @@ const TemplateManager = ({ templates, onSave, onDelete, onClose }) => {
     if (!autoFillUrl) return;
     setIsAutoFilling(true);
     try {
-      const response = await fetch('http://localhost:8000/api/templates/auto-fill', {
+      const response = await fetch(`${API_BASE}/api/templates/auto-fill`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ website_url: autoFillUrl })

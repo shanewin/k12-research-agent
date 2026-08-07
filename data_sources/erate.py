@@ -55,7 +55,7 @@ class ErateIntelligence:
         }
         
         try:
-            response = requests.get(self.BASE_URL_471, headers=self.headers, params=params, auth=self.auth)
+            response = requests.get(self.BASE_URL_471, headers=self.headers, params=params, auth=self.auth, timeout=30)
             if response.status_code != 200:
                 return []
             
@@ -89,7 +89,7 @@ class ErateIntelligence:
         }
         
         try:
-            response = requests.get(self.BASE_URL_470, headers=self.headers, params=params, auth=self.auth)
+            response = requests.get(self.BASE_URL_470, headers=self.headers, params=params, auth=self.auth, timeout=30)
             if response.status_code != 200:
                 return []
             
