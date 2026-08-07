@@ -96,6 +96,7 @@ class HubSpotClient:
         self.dry_run = dry_run
         # Dry-run without a real token: skip even read calls so previews work offline
         self.offline = dry_run and (not token or token == "dry-run")
+        self._group_cache = {}
         self.session = requests.Session()
         self.session.headers.update({
             "Authorization": f"Bearer {token}",
@@ -120,17 +121,55 @@ class HubSpotClient:
 
     # --- Properties ---
 
+    def property_group(self, object_type: str) -> str:
+        """Resolve a valid property group for this object type.
+
+        Group names are not derivable from the object name (companies use
+        'companyinformation', not 'companiesinformation') and vary by portal,
+        so ask the API and fall back to the first available group.
+        """
+        if object_type in self._group_cache:
+            return self._group_cache[object_type]
+        group = None
+        try:
+            data = self._request("GET", f"/crm/v3/properties/{object_type}/groups") or {}
+            names = [g["name"] for g in data.get("results", [])]
+            preferred = f"{object_type.rstrip('s')}information"
+            group = preferred if preferred in names else (names[0] if names else None)
+        except RuntimeError as e:
+            logger.warning(f"  Could not list property groups for {object_type}: {e}")
+        group = group or f"{object_type.rstrip('s')}information"
+        self._group_cache[object_type] = group
+        return group
+
     def ensure_property(self, object_type: str, prop: dict):
         try:
             self._request("GET", f"/crm/v3/properties/{object_type}/{prop['name']}")
             logger.info(f"  Property {object_type}.{prop['name']} already exists")
+            return
         except RuntimeError:
-            body = {**prop, "groupName": f"{object_type}information"}
-            if self.dry_run:
-                logger.info(f"  [dry-run] Would create property {object_type}.{prop['name']}")
-                return
+            pass  # doesn't exist yet — create it
+
+        if self.dry_run:
+            logger.info(f"  [dry-run] Would create property {object_type}.{prop['name']}")
+            return
+
+        # HubSpot requires globally unique property *labels*; namespace ours so
+        # they can't collide with built-ins like "Total Revenue".
+        label = prop.get("label", prop["name"])
+        if not label.startswith("K12"):
+            label = f"K12 {label}"
+        body = {**prop, "label": label, "groupName": self.property_group(object_type)}
+        try:
             self._request("POST", f"/crm/v3/properties/{object_type}", json=body)
             logger.info(f"  Created property {object_type}.{prop['name']}")
+        except RuntimeError as e:
+            if "same label" in str(e):
+                body["label"] = f"{label} ({prop['name']})"
+                self._request("POST", f"/crm/v3/properties/{object_type}", json=body)
+                logger.info(f"  Created property {object_type}.{prop['name']} (label disambiguated)")
+            else:
+                raise
 
     # --- Search ---
 
@@ -470,11 +509,22 @@ def main():
 
     if args.setup:
         logger.info("Ensuring custom properties exist...")
-        for prop in COMPANY_PROPERTIES + FUNDING_COMPANY_PROPERTIES:
-            client.ensure_property("companies", prop)
-        for prop in CONTACT_PROPERTIES:
-            client.ensure_property("contacts", prop)
-        logger.info("Property setup complete.")
+        failures = []
+        for object_type, props in (("companies", COMPANY_PROPERTIES + FUNDING_COMPANY_PROPERTIES),
+                                   ("contacts", CONTACT_PROPERTIES)):
+            for prop in props:
+                try:
+                    client.ensure_property(object_type, prop)
+                except Exception as e:
+                    # One bad property shouldn't abort the whole setup
+                    failures.append(f"{object_type}.{prop['name']}: {str(e)[:160]}")
+                    logger.error(f"  FAILED {object_type}.{prop['name']}")
+        if failures:
+            logger.warning(f"Property setup finished with {len(failures)} failure(s):")
+            for f in failures:
+                logger.warning(f"  - {f}")
+        else:
+            logger.info("Property setup complete.")
         if not (args.result_id or args.all_unsynced or args.json_file or args.funding_csv):
             return
 
