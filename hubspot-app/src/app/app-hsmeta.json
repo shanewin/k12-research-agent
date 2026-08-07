@@ -1,0 +1,16 @@
+{
+  "uid": "ca_k12_intelligence_app",
+  "type": "app",
+  "config": {
+    "name": "California K12 Intelligence",
+    "description": "Surfaces district funding intelligence, ICP target profiles, buying signals, and drafted outreach on the company record.",
+    "distribution": "private",
+    "auth": {
+      "type": "static",
+      "requiredScopes": [
+        "crm.objects.companies.read",
+        "crm.objects.contacts.read"
+      ]
+    }
+  }
+}

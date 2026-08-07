@@ -77,6 +77,11 @@ FUNDING_COMPANY_PROPERTIES = [
     {"name": "k12_school_count", "label": "School Count", "type": "number", "fieldType": "number"},
     {"name": "k12_icp_profile_count", "label": "ICP Profiles Matched", "type": "number", "fieldType": "number"},
     {"name": "k12_icp_profile_tags", "label": "ICP Target Profiles", "type": "string", "fieldType": "text"},
+    # Rendered by the CRM card
+    {"name": "k12_buying_signals", "label": "Buying Signals", "type": "string", "fieldType": "textarea"},
+    {"name": "k12_top_signal", "label": "Top Buying Signal", "type": "string", "fieldType": "text"},
+    {"name": "k12_outreach_status", "label": "Outreach Status", "type": "string", "fieldType": "text"},
+    {"name": "k12_researched_at", "label": "Last Researched", "type": "string", "fieldType": "text"},
 ]
 
 CONTACT_PROPERTIES = [
@@ -233,17 +238,47 @@ class HubSpotClient:
         path = f"/crm/v4/objects/contacts/{contact_id}/associations/default/companies/{company_id}"
         self._request("PUT", path)
 
-    def create_company_note(self, company_id: str, body_html: str):
-        """Attach a note to a company (used for drafted outreach sequences)."""
+    # HubSpot strips HTML comments from note bodies, so the marker has to be
+    # visible text. This phrase is also the note's own heading.
+    NOTE_MARKER = "Drafted outreach sequence"
+
+    def upsert_company_note(self, company_id: str, body_html: str):
+        """Attach (or refresh) our outreach note on a company.
+
+        Repeat syncs update the existing note rather than stacking duplicates.
+        """
+        body = body_html[:64000]
         if self.dry_run:
-            logger.info(f"  [dry-run] Would attach note ({len(body_html)} chars) to company {company_id}")
+            logger.info(f"  [dry-run] Would upsert note ({len(body)} chars) on company {company_id}")
             return
         from datetime import datetime, timezone
-        note = self._request("POST", "/crm/v3/objects/notes", json={"properties": {
-            "hs_note_body": body_html[:65000],
-            "hs_timestamp": datetime.now(timezone.utc).isoformat(),
-        }})
-        self._request("PUT", f"/crm/v4/objects/notes/{note['id']}/associations/default/companies/{company_id}")
+
+        # Find a previous note of ours already associated with this company
+        existing_id = None
+        try:
+            assoc = self._request(
+                "GET", f"/crm/v4/objects/companies/{company_id}/associations/notes?limit=100") or {}
+            note_ids = [r["toObjectId"] for r in assoc.get("results", [])]
+            if note_ids:
+                batch = self._request("POST", "/crm/v3/objects/notes/batch/read", json={
+                    "properties": ["hs_note_body"],
+                    "inputs": [{"id": str(i)} for i in note_ids]}) or {}
+                for n in batch.get("results", []):
+                    if self.NOTE_MARKER in (n.get("properties", {}).get("hs_note_body") or ""):
+                        existing_id = n["id"]
+                        break
+        except RuntimeError as e:
+            logger.warning(f"  Could not check existing notes: {e}")
+
+        props = {"hs_note_body": body,
+                 "hs_timestamp": datetime.now(timezone.utc).isoformat()}
+        if existing_id:
+            self._request("PATCH", f"/crm/v3/objects/notes/{existing_id}", json={"properties": props})
+            logger.info(f"  Updated existing outreach note {existing_id}")
+        else:
+            note = self._request("POST", "/crm/v3/objects/notes", json={"properties": props})
+            self._request("PUT", f"/crm/v4/objects/notes/{note['id']}/associations/default/companies/{company_id}")
+            logger.info(f"  Created outreach note {note['id']}")
 
 
 # --- Mapping: DistrictProfile dict -> HubSpot records ---
@@ -278,6 +313,20 @@ def company_payload(profile: dict) -> dict:
         "k12_ecosystem": profile.get("ecosystem") or "Unknown",
         "k12_intelligence_brief": (profile.get("intelligence_brief") or "")[:5000],
     }
+
+    # Signals and outreach status, formatted for the CRM card
+    signals = profile.get("signals") or []
+    if signals:
+        rank = {"HIGH": 0, "MEDIUM": 1, "LOW": 2}
+        ordered = sorted(signals, key=lambda s: rank.get(str(s.get("strength", "")).upper(), 3))
+        props["k12_top_signal"] = f"[{ordered[0].get('strength')}] {ordered[0].get('title')}"[:255]
+        props["k12_buying_signals"] = "\n".join(
+            f"[{s.get('strength')}] {s.get('title')} — {s.get('detail', '')}" for s in ordered)[:5000]
+    outreach = profile.get("outreach") or {}
+    if outreach.get("emails"):
+        props["k12_outreach_status"] = f"{len(outreach['emails'])} emails drafted"
+    from datetime import date
+    props["k12_researched_at"] = date.today().isoformat()
     if profile.get("total_enrollment"):
         props["k12_total_enrollment"] = profile["total_enrollment"]
     return {k: v for k, v in props.items() if v not in (None, "")}
@@ -357,7 +406,7 @@ def import_profile(client: HubSpotClient, profile: dict, skip_no_email: bool = F
                 f"<em>Angle: {e.get('profile')} · Funding: {e.get('funding_source')}</em><br>"
                 f"{(e.get('body') or '').replace(chr(10), '<br>')}<br><br>"
             )
-        client.create_company_note(company_id, "".join(lines))
+        client.upsert_company_note(company_id, "".join(lines))
         notes_created = 1
 
     logger.info(f"Done: {name} — company synced, {imported} contacts imported, {skipped} skipped"

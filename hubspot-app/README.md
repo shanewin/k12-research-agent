@@ -1,0 +1,29 @@
+# District Intelligence — HubSpot CRM card
+
+A UI extension that renders this platform's district intelligence directly on
+the HubSpot **company** record: ICP targeting, funding profile, need
+indicators, buying signals, and outreach status.
+
+All values are read from the `k12_*` company properties written by
+`hubspot_import.py`, so the card needs no backend of its own.
+
+## Deploy
+
+```bash
+# 1. Authenticate the CLI against the account holding your CRM data
+hs account auth
+
+# 2. From this directory, upload the project
+cd hubspot-app
+hs project upload
+```
+
+Then open any district company record and add the card to the record
+(Customize → add card) — or find it under the record's tabs.
+
+## Files
+
+- `hsproject.json` — project + platform version
+- `src/app/app-hsmeta.json` — private app definition and scopes
+- `src/app/cards/district-intelligence-hsmeta.json` — card placement config
+- `src/app/cards/DistrictIntelligence.jsx` — the React card
