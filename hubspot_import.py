@@ -376,6 +376,26 @@ def _csv_num(val, pct_scale=False):
         return None
 
 
+def _district_description(row: dict) -> str:
+    """One-line summary shown on the HubSpot company record."""
+    bits = []
+    enroll = _csv_num(row.get("enroll"))
+    if enroll:
+        bits.append(f"{int(enroll):,} students")
+    schools = _csv_num(row.get("school_count"))
+    if schools:
+        bits.append(f"{int(schools)} schools")
+    if row.get("county"):
+        bits.append(row["county"])
+    if row.get("urbanicity"):
+        bits.append(row["urbanicity"])
+    tags = row.get("profile_tags")
+    desc = "California school district — " + ", ".join(bits) if bits else "California school district"
+    if tags and tags != "—":
+        desc += f". ICP profiles: {tags}"
+    return desc[:600]
+
+
 def funding_company_payload(row: dict) -> dict:
     """Map one ca_district_funding_full.csv row to HubSpot company properties."""
     website = (row.get("website") or "").strip()
@@ -386,8 +406,18 @@ def funding_company_payload(row: dict) -> dict:
         domain = parsed.netloc.replace("www.", "")
     props = {
         "name": row.get("dist_name"),
+        # Standard HubSpot firmographics (from the NCES/CCD directory) so records
+        # look complete in the default UI and work with maps/territory tools.
+        "address": row.get("street") or "",
+        "city": row.get("city") or "",
         "state": "CA",
+        "zip": row.get("zip") or "",
+        "country": "United States",
+        "phone": row.get("phone") or "",
         "industry": "EDUCATION_MANAGEMENT",
+        "type": "PROSPECT",
+        "numberofemployees": _csv_num(row.get("total_teachers_fte")),
+        "description": _district_description(row),
         "website": website,
         "domain": domain,
         "k12_nces_id": row.get("ncesid") or "",
@@ -423,8 +453,21 @@ def import_funding_csv(client: HubSpotClient, csv_path: str, limit: Optional[int
 
     with open(csv_path, newline="") as f:
         rows = [r for r in csv_mod.DictReader(f) if r.get("dist_name")]
+
+    # Merge NCES/CCD firmographics (address, phone, geo) by NCES id
+    directory = {}
+    dir_path = os.path.join(os.path.dirname(csv_path), "ca_district_directory.csv")
+    if os.path.exists(dir_path):
+        with open(dir_path, newline="") as f:
+            directory = {(d.get("leaid") or "").strip(): d for d in csv_mod.DictReader(f)}
+        logger.info(f"Merging firmographics for {len(directory)} districts")
+
     for r in rows:
         r.update(_compute_profiles(r))
+        d = directory.get((r.get("ncesid") or "").strip())
+        if d:
+            for col in ("street", "city", "zip", "phone", "latitude", "longitude"):
+                r[col] = d.get(col, "")
     if min_enrollment:
         rows = [r for r in rows if (_csv_num(r.get("enroll")) or 0) >= min_enrollment]
     if limit:

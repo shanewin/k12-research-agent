@@ -19,6 +19,10 @@ from typing import Dict, Optional
 logger = logging.getLogger(__name__)
 
 CSV_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "ca_district_funding_full.csv")
+DIRECTORY_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "ca_district_directory.csv")
+
+# Firmographics merged in from the NCES/CCD directory (address, phone, geo)
+DIRECTORY_COLS = ["street", "city", "zip", "phone", "latitude", "longitude", "state_leaid"]
 
 # CSV columns surfaced verbatim into profile.metadata["funding_profile"]
 FUNDING_METADATA_COLS = [
@@ -127,9 +131,20 @@ class LocalFundingData:
         if not os.path.exists(CSV_PATH):
             logger.warning("Local funding CSV not found; enrichment disabled")
             return
+        # District firmographics keyed by NCES id, merged onto each funding row
+        directory = {}
+        if os.path.exists(DIRECTORY_PATH):
+            with open(DIRECTORY_PATH, newline="") as f:
+                for d in csv.DictReader(f):
+                    directory[(d.get("leaid") or "").strip()] = d
+
         with open(CSV_PATH, newline="") as f:
             for row in csv.DictReader(f):
                 row.update(_compute_profiles(row))
+                d = directory.get((row.get("ncesid") or "").strip())
+                if d:
+                    for col in DIRECTORY_COLS:
+                        row[col] = d.get(col, "")
                 leaid = (row.get("ncesid") or "").strip()
                 if leaid:
                     cls._rows_by_id[leaid] = row

@@ -43,6 +43,9 @@ The repo ships with a 68-column dataset covering every California district, buil
 
 - **National**: NCES F-33 finance survey, Census SAIPE poverty estimates, ACS income data, CCD directory (via the [edfinr](https://github.com/bellwetherorg/edfinr) R package by Bellwether and the Urban Institute's [Education Data Portal](https://educationdata.urban.org/)).
 - **California-specific**: LCFF supplemental/concentration funding, free/reduced meal counts, CAASPP reading proficiency, ELPAC English-learner scores, chronic absenteeism, and school improvement status (from the California Department of Education).
+- **Firmographics**: mailing address, phone, geo-coordinates, and school counts for every district (NCES/CCD directory, rebuildable with `scripts/build_district_directory.py`).
+
+Contact emails are discovered from published district addresses rather than a paid data vendor — see `data_sources/email_finder.py`.
 
 Six **target profiles** turn that data into sales intelligence. Each profile is a plain data rule that maps to a specific pitch and a specific funding source the district could use to buy your product. For example:
 
