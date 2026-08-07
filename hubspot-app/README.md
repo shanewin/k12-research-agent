@@ -27,3 +27,23 @@ Then open any district company record and add the card to the record
 - `src/app/app-hsmeta.json` — private app definition and scopes
 - `src/app/cards/district-intelligence-hsmeta.json` — card placement config
 - `src/app/cards/DistrictIntelligence.jsx` — the React card
+
+## Installing the app (required — deploy alone is not enough)
+
+`hs project upload` builds and deploys the app, but the cards will **not**
+appear on any record until the app is *installed* in the target portal.
+A deployed-but-uninstalled app looks exactly like a broken card.
+
+```bash
+# Is it installed?
+hs project app-install-status
+
+# If not, this prints an install URL and waits for you to approve it:
+hs project dev --project-account=<portalId> --testing-account=<portalId>
+```
+
+The install URL looks like:
+`https://app.hubspot.com/static-token/<portalId>/authorize?appId=<appId>`
+
+Approve it in the browser, then the cards become available on company
+records (add them via **Customize** if they don't appear automatically).
