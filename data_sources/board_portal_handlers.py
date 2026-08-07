@@ -17,13 +17,21 @@ class PortalHandler(ABC):
         """Retrieve agenda links for the specified time period."""
         pass
 
+def _lookback_years(months_back: int) -> List[int]:
+    """Calendar years covered by the lookback window, most recent first."""
+    from datetime import date
+    today = date.today()
+    start_year = (today.year * 12 + today.month - 1 - months_back) // 12
+    return list(range(today.year, start_year - 1, -1))
+
+
 class BoardDocsHandler(PortalHandler):
     def harvest_agendas(self, url: str, district_name: str, months_back: int = 24) -> List[Dict]:
         logger.info(f"Hoovering BoardDocs for {district_name} (Lookback: {months_back} months)")
         # BoardDocs often needs targeted search to find "old" meetings because JS navigation is hard to automate
         # We search year by year to be thorough
         all_agendas = []
-        years = [2024, 2025] # We can make this dynamic based on months_back
+        years = _lookback_years(months_back)
         
         for year in years:
             # Search for BOTH agendas and minutes (minutes have the qualitative notes)
@@ -41,14 +49,6 @@ class BoardDocsHandler(PortalHandler):
         # Deduplicate by URL
         unique_agendas = {a["url"]: a for a in all_agendas}.values()
         return list(unique_agendas)
-
-class SimbliHandler(PortalHandler):
-    def harvest_agendas(self, url: str, district_name: str, months_back: int = 24) -> List[Dict]:
-        logger.info(f"Simbli scanning for {district_name}")
-        # Simbli URLs often contain /Public/Organization/ or /Public/Index/
-        query = f'site:eboardsolutions.com "{district_name}" (agenda OR minutes) {2024}'
-        search = self.tavily.search(query, search_depth="advanced", max_results=10)
-        return [{"url": r["url"], "title": r.get("title", "Meeting")} for r in search.get("results", []) if "agenda" in r["url"].lower()]
 
 class CustomHandler(PortalHandler):
     def harvest_agendas(self, url: str, district_name: str, months_back: int = 24) -> List[Dict]:
@@ -80,6 +80,24 @@ class CustomHandler(PortalHandler):
             return json.loads(content)
         except Exception:
             return []
+
+class SimbliHandler(CustomHandler):
+    def harvest_agendas(self, url: str, district_name: str, months_back: int = 24) -> List[Dict]:
+        logger.info(f"Simbli scanning for {district_name}")
+        # The meetings-listing page is server-rendered — extract it directly first
+        agendas = super().harvest_agendas(url, district_name, months_back)
+        if agendas:
+            return agendas
+        # Fallback: search the Simbli domain across the lookback window
+        results = []
+        for year in _lookback_years(months_back)[:2]:
+            query = f'site:eboardsolutions.com "{district_name}" (agenda OR minutes) {year}'
+            search = self.tavily.search(query, search_depth="advanced", max_results=10)
+            for r in (search or {}).get("results", []):
+                if "meeting" in r["url"].lower() or "agenda" in r["url"].lower():
+                    results.append({"url": r["url"], "title": r.get("title", "Meeting")})
+        return list({a["url"]: a for a in results}.values())
+
 
 class PortalRegistry:
     def __init__(self, tavily: K12TavilyClient, anthropic: Anthropic):

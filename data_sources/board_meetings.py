@@ -98,14 +98,28 @@ class BoardMeetingIntelligence:
         if platform == "boarddocs":
             url = entry.get("boarddocs_url")
         elif platform == "simbli":
-            url = entry.get("simbli_url")
+            url = self._normalize_simbli_url(entry.get("simbli_url"))
         elif platform == "self_hosted":
             pages = entry.get("board_pages") or []
             url = pages[0] if pages else None
-        if url and not url.startswith("http"):
-            url = f"https://{url}"
+        if url:
+            url = url.strip().rstrip("\\")
+            if not url.startswith("http"):
+                url = f"https://{url}"
         if url:
             logger.info(f"Board platform map hit: {district_name} -> {platform} ({url})")
+        return url
+
+    @staticmethod
+    def _normalize_simbli_url(url: Optional[str]) -> Optional[str]:
+        """Map entries often point at Simbli's policy pages; rewrite to the
+        meetings listing, which is what the harvester actually needs."""
+        if not url:
+            return None
+        import re
+        m = re.search(r"[?&]s=(\d+)", url, re.IGNORECASE)
+        if m:
+            return f"https://simbli.eboardsolutions.com/SB_Meetings/SB_MeetingListing.aspx?S={m.group(1)}"
         return url
 
     def discover_board_page(self, district_name: str, state: str) -> Optional[str]:
