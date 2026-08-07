@@ -170,6 +170,7 @@ class K12ResearchAgent:
         # 7. Scoring & Synthesis (Phase 8)
         update_status("Phase 8: Finalizing ICP score and synthesizing dossier...")
         profile.icp_score = self.scoring.calculate_score(profile, self.context)
+        profile.metadata["funding_fit_applied"] = True  # scored natively; rescore script skips
         profile.signal_strength = self.scoring.get_signal_strength(profile.icp_score)
         profile.recommended_action = self.scoring.get_recommended_action(profile.icp_score)
         

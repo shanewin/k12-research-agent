@@ -63,7 +63,30 @@ class ScoringEngine:
             else:
                 score -= 10
 
+        # 6. Funding fit (0-30 points) — from the local funding dataset's
+        # target-profile engine. A district matching multiple ICP profiles has
+        # both the need and the money, regardless of what live scraping found.
+        score += self.funding_fit_points(
+            (profile.metadata or {}).get("funding_profile"),
+            profile.title_i_eligible,
+            ctx.title_i_preference,
+        )
+
         return min(100, max(0, score))
+
+    @staticmethod
+    def funding_fit_points(funding_profile: dict, title_i_eligible, title_i_preference) -> int:
+        """Score the funding/ICP fit. Shared with the post-hoc rescore script."""
+        points = 0
+        fp = funding_profile or {}
+        try:
+            profile_count = int(fp.get("profile_count") or 0)
+        except (TypeError, ValueError):
+            profile_count = 0
+        points += min(25, profile_count * 5)  # 5+ ICP profiles -> full 25
+        if title_i_eligible and title_i_preference in ("preferred", "required"):
+            points += 5
+        return points
 
     def get_signal_strength(self, score: int) -> str:
         if score >= 75: return "HIGH"
