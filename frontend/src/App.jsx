@@ -60,13 +60,20 @@ function App() {
     }
   }, [thinkerLogs]);
 
-  // Deep-link support: /?district=Barstow+Unified
+  // Deep-link support: /?district=Barstow+Unified, /?view=prospect, /?view=dossiers&dossier=3
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const linkedDistrict = params.get('district');
     if (linkedDistrict && params.get('demo') !== 'true') {
       setDistrict(linkedDistrict);
       setView('research');
+      return;
+    }
+    const v = params.get('view');
+    if (['dashboard', 'prospect', 'research', 'dossiers'].includes(v)) {
+      setView(v);
+      const d = params.get('dossier');
+      if (v === 'dossiers' && d) setDossierId(Number(d));
     }
   }, []);
 

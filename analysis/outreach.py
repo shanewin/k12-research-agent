@@ -188,7 +188,7 @@ def _slim_report(profile_data: dict) -> dict:
     }
 
 
-def _contact_suggestions(profile_data: dict, buyer_titles: list) -> list:
+def _contact_suggestions(profile_data: dict, buyer_titles: list, sponsor_titles: list = None) -> list:
     """Suggest recipients, strongest reason first. Evidence-based only."""
     suggestions = []
     for c in profile_data.get("contacts") or []:
@@ -201,6 +201,9 @@ def _contact_suggestions(profile_data: dict, buyer_titles: list) -> list:
         elif any(bt.lower() in title.lower() for bt in buyer_titles):
             suggestions.append({"name": name, "title": title, "email": c.get("email"),
                                 "reason": "Title matches the product's primary buyer profile"})
+        elif any(st.lower() in title.lower() for st in (sponsor_titles or [])):
+            suggestions.append({"name": name, "title": title, "email": c.get("email"),
+                                "reason": "Executive sponsor — can champion the purchase"})
     return suggestions[:5]
 
 
@@ -266,7 +269,8 @@ def generate_outreach(result_id: int) -> dict:
         result = json.loads(text)
 
         result["profiles_used"] = matched
-        result["suggested_contacts"] = _contact_suggestions(profile_data, context.primary_buyer_titles)
+        result["suggested_contacts"] = _contact_suggestions(
+            profile_data, context.primary_buyer_titles, context.executive_sponsor_titles)
 
         profile_data["outreach"] = result
         record.profile_data = profile_data

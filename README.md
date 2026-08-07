@@ -22,6 +22,8 @@ I've open-sourced it as-built. It is deliberately **not** a configurable multi-p
 
 ## What it looks like
 
+![Dashboard — pipeline funnel, hot targets, recent dossiers](docs/screenshots/dashboard.png)
+
 A single web app with four views:
 
 | View | What it does |
@@ -30,6 +32,10 @@ A single web app with four views:
 | **Prospect** | All 1,860 districts in a sortable table with an ICP score badge on every row. Filter by target profile, enrollment, poverty, funding, county. Click any row to open a CRM-style record panel with 12 funding metrics and one-click actions. |
 | **Research** | Pick a district and hit go. A live activity feed shows the AI agent working; a full intelligence dossier appears when it finishes. |
 | **Dossiers** | The library of every research report: ICP score, buying signals, decision-makers, and a written brief — with HubSpot sync status on each. |
+
+![Prospect view — ICP-scored district table with target profile filters](docs/screenshots/prospect.png)
+
+![Research dossier — buying profile, decision makers, drafted outreach](docs/screenshots/dossier.png)
 
 ## How the scoring works (no AI, no cost)
 
