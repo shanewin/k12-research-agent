@@ -52,10 +52,12 @@ CORPUS TEXT:
         try:
             response = self.anthropic.messages.create(
                 model="claude-haiku-4-5",
-                max_tokens=2000,
+                max_tokens=8000,
                 messages=[{"role": "user", "content": prompt}]
             )
             text = response.content[0].text
+            if response.stop_reason == "max_tokens":
+                logger.warning("Comprehensive extraction hit max_tokens; output may be truncated")
             if "```json" in text:
                 text = text.split("```json")[-1].split("```")[0].strip()
             elif "```" in text:

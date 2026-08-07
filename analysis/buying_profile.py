@@ -1,8 +1,11 @@
 import json
+import logging
 from anthropic import Anthropic
 from models.district import DistrictProfile
 from models.buying_profile import BuyingProfile
 from config.product_context import ProductContext
+
+logger = logging.getLogger(__name__)
 
 class BuyingProfileAnalyzer:
     """
@@ -68,22 +71,38 @@ class BuyingProfileAnalyzer:
         }}
         """
 
+        # Structured outputs guarantee schema-valid JSON; the generous token
+        # budget prevents truncation now that districts carry rich E-Rate
+        # histories (a truncated response used to fail with "Unterminated string").
+        schema = {
+            "type": "object",
+            "properties": {
+                "style": {"type": "string"},
+                "confidence": {"type": "string", "enum": ["HIGH", "MEDIUM", "LOW"]},
+                "justification": {"type": "string"},
+                "procurement_velocity": {"type": "string", "enum": ["FAST", "MODERATE", "SLOW"]},
+                "price_sensitivity_score": {"type": "integer"},
+                "vendor_loyalty_score": {"type": "integer"},
+                "key_procurement_findings": {"type": "array", "items": {"type": "string"}},
+                "recommended_sales_strategy": {"type": "string"},
+            },
+            "required": ["style", "confidence", "justification", "procurement_velocity",
+                         "price_sensitivity_score", "vendor_loyalty_score",
+                         "key_procurement_findings", "recommended_sales_strategy"],
+            "additionalProperties": False,
+        }
+
         try:
             response = self.client.messages.create(
                 model="claude-haiku-4-5",
-                max_tokens=1000,
+                max_tokens=4000,
+                output_config={"format": {"type": "json_schema", "schema": schema}},
                 messages=[{"role": "user", "content": prompt}]
             )
-            
-            # Extract JSON from response (handling potential markdown)
-            content = response.content[0].text
-            if "```json" in content:
-                content = content.split("```json")[-1].split("```")[0].strip()
-            elif "```" in content:
-                content = content.split("```")[-1].split("```")[0].strip()
-            elif "{" in content and "}" in content:
-                content = content[content.find("{"):content.rfind("}") + 1]
-            
+
+            content = next(b.text for b in response.content if b.type == "text")
+            if response.stop_reason == "max_tokens":
+                logger.warning("Buying profile response hit max_tokens; output may be truncated")
             data = json.loads(content)
             
             return BuyingProfile(
