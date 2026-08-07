@@ -5,9 +5,15 @@
     "name": "California K12 Intelligence",
     "description": "Surfaces district funding intelligence, ICP target profiles, buying signals, and drafted outreach on the company record.",
     "distribution": "private",
+    "permittedUrls": {
+      "fetch": [],
+      "iframe": [],
+      "img": []
+    },
     "auth": {
       "type": "static",
       "requiredScopes": [
+        "oauth",
         "crm.objects.companies.read",
         "crm.objects.contacts.read"
       ]

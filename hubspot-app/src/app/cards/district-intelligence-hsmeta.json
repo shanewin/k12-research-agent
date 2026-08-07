@@ -5,7 +5,7 @@
     "name": "District Intelligence",
     "description": "Funding profile, ICP targeting, and buying signals for this district.",
     "location": "crm.record.tab",
-    "objectTypes": [{ "name": "companies" }],
-    "entryPoint": "DistrictIntelligence.jsx"
+    "objectTypes": ["companies"],
+    "entrypoint": "/app/cards/DistrictIntelligence.jsx"
   }
 }
