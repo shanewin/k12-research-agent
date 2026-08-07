@@ -62,18 +62,35 @@ class K12ResearchAgent:
         profile = DistrictProfile(district_name=name, state=state_code)
 
         # 1. Exhaustive Domain Scraping (Phase 1)
-        update_status("Phase 1: Performing Deep Domain Crawl...")
-        query = f'"{name}" {state_code} official school district website'
-        results = self.tavily.search(query, search_depth="basic", max_results=3)
+        update_status("Phase 1: Resolving official district website...")
         website_url = None
-        if results and results.get("results"):
-            for res in results["results"]:
-                url = res.get("url", "").lower()
-                if any(x in url for x in [".org", ".edu", ".us", ".net", ".k12"]):
-                    website_url = res.get("url")
-                    break
-            if not website_url:
-                website_url = results["results"][0].get("url")
+
+        # Authoritative source first: the funding dataset carries each CA
+        # district's official website (no search, no wrong-domain risk).
+        from data_sources.local_funding import LocalFundingData
+        funding_row = LocalFundingData.lookup(district_name=name, state=state_code)
+        if funding_row and funding_row.get("website"):
+            website_url = funding_row["website"]
+            if not website_url.startswith("http"):
+                website_url = f"https://{website_url}"
+            update_status(f"Phase 1: Official website from dataset: {website_url}")
+
+        if not website_url:
+            query = f'"{name}" {state_code} official school district website'
+            results = self.tavily.search(query, search_depth="basic", max_results=5)
+            # Aggregators/encyclopedias that match the old ".org" heuristic but
+            # are never the district's own site
+            blocked = ["wikipedia.", "facebook.", "niche.com", "greatschools",
+                       "usnews.", "linkedin.", "twitter.", "instagram.", "youtube.",
+                       "publicschoolreview", "highbond.com", "zillow."]
+            if results and results.get("results"):
+                for res in results["results"]:
+                    url = res.get("url", "").lower()
+                    if any(b in url for b in blocked):
+                        continue
+                    if any(x in url for x in [".org", ".edu", ".us", ".net", ".k12"]):
+                        website_url = res.get("url")
+                        break
         
         # 1. Targeted Discovery & Download (Phase 1)
         update_status("Phase 1: Executing Targeted Site-First Discovery (2-Year Window)...")

@@ -1,127 +1,151 @@
+import logging
 import os
 import requests
-from typing import List
+from typing import List, Optional
 from models.erate import ErateReport, ErateFundingRequest
+
+logger = logging.getLogger(__name__)
+
 
 class ErateIntelligence:
     """
-    Module for extracting E-Rate funding and RFP data from USAC Open Data (Socrata).
-    """
-    
-    BASE_URL_471 = "https://opendata.usac.org/resource/4vjh-m9v3.json" # Form 471 Dataset
-    BASE_URL_470 = "https://opendata.usac.org/resource/jsy6-d5cw.json" # Form 470 Dataset
-    
-    def __init__(self):
-        self.app_token = os.getenv("USAC_APP_TOKEN")
-        self.api_key_id = os.getenv("USAC_API_KEY_ID")
-        self.api_key_secret = os.getenv("USAC_API_KEY_SECRET")
-        self.headers = {
-            "X-App-Token": self.app_token
-        }
-        if self.api_key_id and self.api_key_secret:
-            self.auth = (self.api_key_id, self.api_key_secret)
-        else:
-            self.auth = None
+    E-Rate funding and RFP intelligence from USAC Open Data (Socrata).
 
-    def get_district_erate_data(self, nces_id: str, district_name: str) -> ErateReport:
+    USAC datasets are keyed by BEN (Billed Entity Number), not NCES ID, so we
+    first resolve the district's BEN by name+state via the C2 Budget dataset,
+    then pull Form 471 funding requests (spending history + pending requests)
+    and Form 470 postings (active RFPs / bidding intent).
+    """
+
+    # Current dataset IDs (verified 2026-08; USAC rotates these occasionally —
+    # if everything starts returning not_found, re-check via
+    # https://opendata.usac.org/api/views/metadata/v1)
+    DS_C2_BUDGET = "https://opendata.usac.org/resource/6brt-5pbv.json"   # BEN lookup
+    DS_FORM_471 = "https://opendata.usac.org/resource/qdmp-ygft.json"    # FRN status
+    DS_FORM_470 = "https://opendata.usac.org/resource/jp7a-89nd.json"    # 470 basic info
+
+    def __init__(self):
+        self.headers = {}
+        app_token = os.getenv("USAC_APP_TOKEN")
+        if app_token and app_token != "optional":
+            self.headers["X-App-Token"] = app_token
+
+    def _get(self, url: str, params: dict) -> list:
+        try:
+            resp = requests.get(url, headers=self.headers, params=params, timeout=30)
+            if resp.status_code != 200:
+                logger.warning(f"USAC query failed ({resp.status_code}): {resp.text[:150]}")
+                return []
+            data = resp.json()
+            return data if isinstance(data, list) else []
+        except Exception as e:
+            logger.warning(f"USAC request error: {e}")
+            return []
+
+    def _resolve_ben(self, district_name: str, state: str = "CA") -> Optional[str]:
+        """Find the district's Billed Entity Number by name."""
+        name = district_name.upper().replace("'", "")
+        # Try progressively looser name matches, preferring School District entities
+        candidates = []
+        for needle in [name, name.replace(" UNIFIED", "").replace(" ELEMENTARY", "").strip()]:
+            rows = self._get(self.DS_C2_BUDGET, {
+                "$where": f"upper(billed_entity_name) like '%{needle}%' AND state='{state.upper()}'",
+                "$limit": 20,
+            })
+            if rows:
+                candidates = rows
+                break
+        if not candidates:
+            return None
+        districts = [r for r in candidates if r.get("applicant_type") == "School District"]
+        pick = (districts or candidates)[0]
+        logger.info(f"E-Rate BEN resolved: {district_name} -> {pick.get('ben')} ({pick.get('billed_entity_name')})")
+        return pick.get("ben")
+
+    def get_district_erate_data(self, nces_id: str, district_name: str, state: str = "CA") -> ErateReport:
         report = ErateReport(status="searching")
-        
-        # 1. Fetch Form 471 (Funding Requests - Past/Current spending)
-        requests_471 = self._fetch_471_data(nces_id)
-        
-        # 2. Fetch Form 470 (RFP/Bidding - Future intent)
-        requests_470 = self._fetch_470_data(nces_id)
-        
-        all_requests = requests_471 + requests_470
-        
+
+        ben = self._resolve_ben(district_name, state)
+        if not ben:
+            report.status = "not_found"
+            return report
+        report.ben = ben
+
+        all_requests = self._fetch_471(ben) + self._fetch_470(ben)
         if not all_requests:
             report.status = "not_found"
             return report
-            
+
         report.funding_history = all_requests
         report.status = "complete"
         self._calculate_summary(report)
-        
         return report
 
-    def _fetch_471_data(self, nces_id: str) -> List[ErateFundingRequest]:
-        # Simple SoQL query for Form 471
-        # Note: Fields might vary slightly by dataset version, but nces_id is standard in E-Rate datasets
-        params = {
-            "$where": f"nces_id = '{nces_id}'",
+    def _fetch_471(self, ben: str) -> List[ErateFundingRequest]:
+        rows = self._get(self.DS_FORM_471, {
+            "$where": f"ben='{ben}'",
             "$order": "funding_year DESC",
-            "$limit": 50
-        }
-        
-        try:
-            response = requests.get(self.BASE_URL_471, headers=self.headers, params=params, auth=self.auth, timeout=30)
-            if response.status_code != 200:
-                return []
-            
-            data = response.json()
-            requests_list = []
-            for item in data:
-                requests_list.append(ErateFundingRequest(
-                    funding_year=int(item.get('funding_year', 0)),
-                    application_number=item.get('application_number', ''),
-                    frn=item.get('frn', ''),
-                    ben=item.get('ben', ''),
-                    organization_name=item.get('organization_name', ''),
-                    service_type=item.get('service_type', ''),
-                    product_service_description=item.get('product_service_description', ''),
-                    vendor_name=item.get('service_provider_name', ''),
-                    total_cost=float(item.get('total_cost', 0.0)),
-                    funding_commitment_request=float(item.get('funding_commitment_request', 0.0)),
-                    status=item.get('status', 'Unknown'),
-                    form_type="Form 471"
+            "$limit": 50,
+        })
+        out = []
+        for item in rows:
+            try:
+                out.append(ErateFundingRequest(
+                    funding_year=int(item.get("funding_year") or 0),
+                    application_number=item.get("application_number", ""),
+                    frn=item.get("funding_request_number", ""),
+                    ben=item.get("ben", ""),
+                    organization_name=item.get("organization_name", ""),
+                    service_type=item.get("form_471_service_type_name", ""),
+                    product_service_description=(item.get("narrative") or item.get("nickname") or "")[:500],
+                    vendor_name=item.get("spin_name", ""),
+                    total_cost=float(item.get("total_pre_discount_costs") or 0.0),
+                    funding_commitment_request=float(item.get("funding_commitment_request") or 0.0),
+                    status=item.get("form_471_frn_status_name", "Unknown"),
+                    form_type="Form 471",
                 ))
-            return requests_list
-        except Exception:
-            return []
+            except (TypeError, ValueError):
+                continue
+        return out
 
-    def _fetch_470_data(self, nces_id: str) -> List[ErateFundingRequest]:
-        # Simple SoQL query for Form 470
-        params = {
-            "$where": f"nces_id = '{nces_id}'",
+    def _fetch_470(self, ben: str) -> List[ErateFundingRequest]:
+        rows = self._get(self.DS_FORM_470, {
+            "$where": f"ben='{ben}'",
             "$order": "funding_year DESC",
-            "$limit": 20
-        }
-        
-        try:
-            response = requests.get(self.BASE_URL_470, headers=self.headers, params=params, auth=self.auth, timeout=30)
-            if response.status_code != 200:
-                return []
-            
-            data = response.json()
-            requests_list = []
-            for item in data:
-                requests_list.append(ErateFundingRequest(
-                    funding_year=int(item.get('funding_year', 0)),
-                    application_number=item.get('application_number', ''),
+            "$limit": 20,
+        })
+        out = []
+        for item in rows:
+            desc = item.get("category_one_description") or item.get("category_two_description") or ""
+            try:
+                out.append(ErateFundingRequest(
+                    funding_year=int(item.get("funding_year") or 0),
+                    application_number=item.get("application_number", ""),
                     frn="N/A (RFP Phase)",
-                    ben=item.get('ben', ''),
-                    organization_name=item.get('organization_name', ''),
-                    service_type=item.get('service_type', ''),
-                    product_service_description="RFP for: " + item.get('service_request_description', ''),
+                    ben=item.get("ben", ""),
+                    organization_name=item.get("billed_entity_name", ""),
+                    service_type=item.get("applicant_type", ""),
+                    product_service_description=("RFP: " + (item.get("form_nickname") or "") + " " + desc)[:500],
                     vendor_name="N/A (Bidding)",
                     total_cost=0.0,
                     funding_commitment_request=0.0,
                     status="Active RFP",
-                    form_type="Form 470"
+                    form_type="Form 470",
                 ))
-            return requests_list
-        except Exception:
-            return []
+            except (TypeError, ValueError):
+                continue
+        return out
 
     def _calculate_summary(self, report: ErateReport):
-        recent_year = 2024
+        latest_year = max((r.funding_year for r in report.funding_history), default=0)
+        recent_cutoff = latest_year - 1
         total = 0.0
         rfps = 0
         pendings = 0
         vendors = set()
-        
+
         for req in report.funding_history:
-            if req.funding_year >= recent_year:
+            if req.funding_year >= recent_cutoff:
                 total += req.funding_commitment_request
             if req.form_type == "Form 470":
                 rfps += 1
@@ -129,14 +153,17 @@ class ErateIntelligence:
                 pendings += 1
             if req.vendor_name and req.vendor_name != "N/A (Bidding)":
                 vendors.add(req.vendor_name)
-        
+
         report.total_funding_recent = total
         report.active_rfps_count = rfps
         report.pending_requests_count = pendings
         report.key_vendors = list(vendors)[:5]
-        
-        report.summary = f"Identified {len(report.funding_history)} E-Rate records. Recent funding for 2024+ totals ${total:,.2f}. "
+
+        report.summary = (
+            f"Identified {len(report.funding_history)} E-Rate records. "
+            f"Funding requested for FY{recent_cutoff}+ totals ${total:,.2f}. "
+        )
         if rfps > 0:
-            report.summary += f"There are {rfps} active RFPs (Form 470s) indicating upcoming purchasing intent."
+            report.summary += f"{rfps} Form 470 postings indicate competitive bidding activity."
         else:
-            report.summary += "No active RFPs (Form 470s) found for the current window."
+            report.summary += "No recent Form 470 postings found."
