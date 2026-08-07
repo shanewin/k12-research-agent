@@ -131,7 +131,9 @@ That's the entire adaptation. The 68-column dataset already covers funding, pove
 
 ## HubSpot integration
 
-The end state of the pipeline is your CRM. Create a [HubSpot Private App](https://developers.hubspot.com/docs/api/private-apps) with `crm.objects.companies`, `crm.objects.contacts`, and `crm.schemas` read/write scopes, put its token in `.env` as `HUBSPOT_ACCESS_TOKEN`, then:
+The end state of the pipeline is your CRM. Create a **service key** — HubSpot's current credential for data-only integrations — in *Settings → Integrations → Service Keys* (or *Development → Keys → Service Keys*), granting read and write on companies, contacts, schemas, and notes. Put it in `.env` as `HUBSPOT_ACCESS_TOKEN`, then:
+
+> Service keys are sent as `Authorization: Bearer <key>`, so a legacy private-app token (*Development → Legacy apps*) works identically if you already have one. Both need to be created **inside the CRM portal that holds your data** — a developer account has no CRM of its own; use a [developer test account](https://developers.hubspot.com/docs/guides/apps/developer-projects/test-accounts) for a free portal with Enterprise-trial features.
 
 ```bash
 # One time: create ~30 custom properties (ICP score, funding data, signals...)
